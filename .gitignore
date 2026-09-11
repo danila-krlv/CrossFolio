@@ -67,3 +67,6 @@ iOSInjectionProject/
 local.properties
 .idea/
 caches/
+
+# Local skills
+/.agents/skills/
