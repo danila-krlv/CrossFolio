@@ -9,11 +9,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.crossfolio.shared.HelloViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,28 +23,28 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun CrossFolioApp(viewModel: HelloViewModel = remember { HelloViewModel() }) {
+private fun CrossFolioApp() {
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            HelloScreen(greeting = viewModel.greeting)
+            PlaceholderScreen()
         }
     }
 }
 
 @Composable
-private fun HelloScreen(greeting: String) {
+private fun PlaceholderScreen() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = greeting)
+        Text(text = "CrossFolio")
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun HelloScreenPreview() {
+private fun PlaceholderScreenPreview() {
     MaterialTheme {
-        HelloScreen(greeting = "Hello")
+        PlaceholderScreen()
     }
 }
