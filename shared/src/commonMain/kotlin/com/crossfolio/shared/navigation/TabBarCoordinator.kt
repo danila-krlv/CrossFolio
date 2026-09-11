@@ -1,7 +1,7 @@
 package com.crossfolio.shared.navigation
 
 import com.crossfolio.shared.analytics.AnalyticsViewModel
-import com.crossfolio.shared.portfolio.PortfolioViewModel
+import com.crossfolio.shared.portfolio.PortfolioCoordinator
 import com.crossfolio.shared.profile.ProfileViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +18,7 @@ data class TabBarState(
 )
 
 class TabBarCoordinator(
-    val portfolioViewModel: PortfolioViewModel = PortfolioViewModel(),
+    val portfolioCoordinator: PortfolioCoordinator = PortfolioCoordinator(),
     val analyticsViewModel: AnalyticsViewModel = AnalyticsViewModel(),
     val profileViewModel: ProfileViewModel = ProfileViewModel(),
 ) {
