@@ -5,6 +5,24 @@ import kotlin.test.assertEquals
 
 class ProfileViewModelTest {
     @Test
+    fun updatesStateWithoutPlatformStorages() {
+        val viewModel = ProfileViewModel()
+
+        viewModel.setUserName("Danila")
+        viewModel.setTheme(AppTheme.DARK)
+        viewModel.setCoinMarketCapApiKey("api-key")
+
+        assertEquals(
+            ProfileState(
+                userName = "Danila",
+                theme = AppTheme.DARK,
+                coinMarketCapApiKey = "api-key",
+            ),
+            viewModel.state.value,
+        )
+    }
+
+    @Test
     fun readsAndWritesProfileFieldsThroughPlatformStorages() {
         val preferencesStorage = FakePreferencesStorage(
             userName = "Danila",

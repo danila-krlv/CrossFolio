@@ -78,7 +78,7 @@
 				200000000000000000000010 /* AnalyticsScreen.swift */,
 				200000000000000000000011 /* ProfileScreen.swift */,
 			);
-			path = Common;
+			path = ui;
 			sourceTree = "<group>";
 		};
 		400000000000000000000003 /* iOS */ = {
