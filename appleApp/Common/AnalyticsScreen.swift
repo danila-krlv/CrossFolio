@@ -1,4 +1,4 @@
-import Shared
+import Common
 import SwiftUI
 
 struct AnalyticsScreen: View {

@@ -1,6 +1,6 @@
-package com.crossfolio.shared.portfolio
+package com.crossfolio.common.portfolio
 
-import com.crossfolio.shared.assetsearch.AssetSearchViewModel
+import com.crossfolio.common.assetsearch.AssetSearchViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

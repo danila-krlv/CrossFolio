@@ -13,10 +13,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.crossfolio.shared.assetsearch.AssetSearchViewModel
-import com.crossfolio.shared.portfolio.PortfolioCoordinator
-import com.crossfolio.shared.portfolio.PortfolioRoute
-import com.crossfolio.shared.portfolio.PortfolioViewModel
+import com.crossfolio.common.assetsearch.AssetSearchViewModel
+import com.crossfolio.common.portfolio.PortfolioCoordinator
+import com.crossfolio.common.portfolio.PortfolioRoute
+import com.crossfolio.common.portfolio.PortfolioViewModel
 
 @Composable
 fun PortfolioScreen(coordinator: PortfolioCoordinator) {

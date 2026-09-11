@@ -14,8 +14,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.crossfolio.shared.navigation.AppTab
-import com.crossfolio.shared.navigation.TabBarCoordinator
+import com.crossfolio.common.navigation.AppTab
+import com.crossfolio.common.navigation.TabBarCoordinator
 
 @Composable
 fun TabBarScreen(

@@ -8,7 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.crossfolio.shared.analytics.AnalyticsViewModel
+import com.crossfolio.common.analytics.AnalyticsViewModel
 
 @Composable
 fun AnalyticsScreen(viewModel: AnalyticsViewModel) {

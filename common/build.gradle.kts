@@ -7,12 +7,12 @@ plugins {
 
 kotlin {
     androidLibrary {
-        namespace = "com.crossfolio.shared"
+        namespace = "com.crossfolio.common"
         compileSdk = 37
         minSdk = 23
     }
 
-    val xcf = XCFramework("Shared")
+    val xcf = XCFramework("Common")
 
     listOf(
         iosArm64(),
@@ -20,7 +20,7 @@ kotlin {
         macosArm64(),
     ).forEach { target ->
         target.binaries.framework {
-            baseName = "Shared"
+            baseName = "Common"
             isStatic = true
             xcf.add(this)
         }

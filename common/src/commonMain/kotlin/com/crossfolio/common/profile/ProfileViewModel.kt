@@ -1,4 +1,4 @@
-package com.crossfolio.shared.profile
+package com.crossfolio.common.profile
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

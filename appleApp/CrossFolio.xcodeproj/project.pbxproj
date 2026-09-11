@@ -9,10 +9,10 @@
 /* Begin PBXBuildFile section */
 		100000000000000000000001 /* CrossFolioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000001 /* CrossFolioApp.swift */; };
 		100000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000002 /* ContentView.swift */; };
-		100000000000000000000003 /* Shared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 200000000000000000000003 /* Shared.framework */; };
+		100000000000000000000003 /* Common.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 200000000000000000000003 /* Common.framework */; };
 		100000000000000000000004 /* CrossFolioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000001 /* CrossFolioApp.swift */; };
 		100000000000000000000005 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000002 /* ContentView.swift */; };
-		100000000000000000000006 /* Shared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 200000000000000000000003 /* Shared.framework */; };
+		100000000000000000000006 /* Common.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 200000000000000000000003 /* Common.framework */; };
 		100000000000000000000007 /* TabBarScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000008 /* TabBarScreen.swift */; };
 		100000000000000000000008 /* PortfolioScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000009 /* PortfolioScreen.swift */; };
 		100000000000000000000009 /* AnalyticsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000010 /* AnalyticsScreen.swift */; };
@@ -26,7 +26,7 @@
 /* Begin PBXFileReference section */
 		200000000000000000000001 /* CrossFolioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossFolioApp.swift; sourceTree = "<group>"; };
 		200000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		200000000000000000000003 /* Shared.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Shared.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000003 /* Common.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Common.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		200000000000000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		200000000000000000000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		200000000000000000000006 /* CrossFolio iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CrossFolio iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -42,7 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				100000000000000000000003 /* Shared.framework in Frameworks */,
+				100000000000000000000003 /* Common.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -50,7 +50,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				100000000000000000000006 /* Shared.framework in Frameworks */,
+				100000000000000000000006 /* Common.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -60,7 +60,7 @@
 		400000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				400000000000000000000002 /* Shared */,
+				400000000000000000000002 /* Common */,
 				400000000000000000000003 /* iOS */,
 				400000000000000000000004 /* macOS */,
 				400000000000000000000005 /* Frameworks */,
@@ -68,7 +68,7 @@
 			);
 			sourceTree = "<group>";
 		};
-		400000000000000000000002 /* Shared */ = {
+		400000000000000000000002 /* Common */ = {
 			isa = PBXGroup;
 			children = (
 				200000000000000000000001 /* CrossFolioApp.swift */,
@@ -78,7 +78,7 @@
 				200000000000000000000010 /* AnalyticsScreen.swift */,
 				200000000000000000000011 /* ProfileScreen.swift */,
 			);
-			path = Shared;
+			path = Common;
 			sourceTree = "<group>";
 		};
 		400000000000000000000003 /* iOS */ = {
@@ -100,7 +100,7 @@
 		400000000000000000000005 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				200000000000000000000003 /* Shared.framework */,
+				200000000000000000000003 /* Common.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -225,7 +225,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :common:embedAndSignAppleFrameworkForXcode\n";
 		};
 		700000000000000000000002 /* Compile Kotlin Framework */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -244,7 +244,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :common:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

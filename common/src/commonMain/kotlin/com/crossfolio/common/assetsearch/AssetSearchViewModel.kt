@@ -1,4 +1,4 @@
-package com.crossfolio.shared.assetsearch
+package com.crossfolio.common.assetsearch
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

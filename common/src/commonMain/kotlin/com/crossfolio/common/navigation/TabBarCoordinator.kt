@@ -1,8 +1,8 @@
-package com.crossfolio.shared.navigation
+package com.crossfolio.common.navigation
 
-import com.crossfolio.shared.analytics.AnalyticsViewModel
-import com.crossfolio.shared.portfolio.PortfolioCoordinator
-import com.crossfolio.shared.profile.ProfileViewModel
+import com.crossfolio.common.analytics.AnalyticsViewModel
+import com.crossfolio.common.portfolio.PortfolioCoordinator
+import com.crossfolio.common.profile.ProfileViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

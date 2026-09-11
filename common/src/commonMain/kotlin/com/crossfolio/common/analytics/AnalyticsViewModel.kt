@@ -1,4 +1,4 @@
-package com.crossfolio.shared.analytics
+package com.crossfolio.common.analytics
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
