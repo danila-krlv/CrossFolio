@@ -64,6 +64,7 @@ iOSInjectionProject/
 
 # Gradle and local Android SDK configuration
 .gradle/
+/.kotlin/
 local.properties
 .idea/
 caches/
