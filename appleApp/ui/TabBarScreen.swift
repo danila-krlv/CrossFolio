@@ -8,7 +8,10 @@ struct TabBarScreen: View {
     init(coordinator: TabBarCoordinator = TabBarCoordinator(
         portfolioCoordinator: PortfolioCoordinator(),
         analyticsViewModel: AnalyticsViewModel(),
-        profileViewModel: ProfileViewModel()
+        profileViewModel: ProfileViewModel(
+            preferencesStorage: AppleProfilePreferencesStorage(),
+            secureStorage: AppleProfileSecureStorage()
+        )
     )) {
         self.coordinator = coordinator
         _selectedTab = State(

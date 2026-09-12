@@ -21,7 +21,20 @@
 		100000000000000000000012 /* PortfolioScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000009 /* PortfolioScreen.swift */; };
 		100000000000000000000013 /* AnalyticsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000010 /* AnalyticsScreen.swift */; };
 		100000000000000000000014 /* ProfileScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000011 /* ProfileScreen.swift */; };
+		100000000000000000000015 /* AppleProfileStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000012 /* AppleProfileStorage.swift */; };
+		100000000000000000000016 /* AppleProfileStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000012 /* AppleProfileStorage.swift */; };
+		100000000000000000000017 /* ProfileStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000013 /* ProfileStorageTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D00000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 500000000000000000000001;
+			remoteInfo = "CrossFolio iOS";
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		200000000000000000000001 /* CrossFolioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossFolioApp.swift; sourceTree = "<group>"; };
@@ -35,6 +48,9 @@
 		200000000000000000000009 /* PortfolioScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioScreen.swift; sourceTree = "<group>"; };
 		200000000000000000000010 /* AnalyticsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsScreen.swift; sourceTree = "<group>"; };
 		200000000000000000000011 /* ProfileScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileScreen.swift; sourceTree = "<group>"; };
+		200000000000000000000012 /* AppleProfileStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleProfileStorage.swift; sourceTree = "<group>"; };
+		200000000000000000000013 /* ProfileStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStorageTests.swift; sourceTree = "<group>"; };
+		200000000000000000000014 /* CrossFolio iOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "CrossFolio iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,6 +70,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		300000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -65,6 +88,7 @@
 				400000000000000000000004 /* macOS */,
 				400000000000000000000005 /* Frameworks */,
 				400000000000000000000006 /* Products */,
+				400000000000000000000007 /* iOSTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -77,8 +101,9 @@
 				200000000000000000000009 /* PortfolioScreen.swift */,
 				200000000000000000000010 /* AnalyticsScreen.swift */,
 				200000000000000000000011 /* ProfileScreen.swift */,
+				200000000000000000000012 /* AppleProfileStorage.swift */,
 			);
-			path = Common;
+			path = ui;
 			sourceTree = "<group>";
 		};
 		400000000000000000000003 /* iOS */ = {
@@ -110,8 +135,17 @@
 			children = (
 				200000000000000000000006 /* CrossFolio iOS.app */,
 				200000000000000000000007 /* CrossFolio macOS.app */,
+				200000000000000000000014 /* CrossFolio iOSTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		400000000000000000000007 /* iOSTests */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000013 /* ProfileStorageTests.swift */,
+			);
+			path = iOSTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -153,6 +187,24 @@
 			productReference = 200000000000000000000007 /* CrossFolio macOS.app */;
 			productType = "com.apple.product-type.application";
 		};
+		500000000000000000000003 /* CrossFolio iOSTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 600000000000000000000004 /* Build configuration list for PBXNativeTarget "CrossFolio iOSTests" */;
+			buildPhases = (
+				800000000000000000000003 /* Sources */,
+				300000000000000000000003 /* Frameworks */,
+				900000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D00000000000000000000002 /* PBXTargetDependency */,
+			);
+			name = "CrossFolio iOSTests";
+			productName = "CrossFolio iOSTests";
+			productReference = 200000000000000000000014 /* CrossFolio iOSTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -168,6 +220,10 @@
 					};
 					500000000000000000000002 = {
 						CreatedOnToolsVersion = 26.6;
+					};
+					500000000000000000000003 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 500000000000000000000001;
 					};
 				};
 			};
@@ -186,6 +242,7 @@
 			targets = (
 				500000000000000000000001 /* CrossFolio iOS */,
 				500000000000000000000002 /* CrossFolio macOS */,
+				500000000000000000000003 /* CrossFolio iOSTests */,
 			);
 		};
 /* End PBXProject section */
@@ -199,6 +256,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		900000000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		900000000000000000000003 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -259,6 +323,7 @@
 				100000000000000000000008 /* PortfolioScreen.swift in Sources */,
 				100000000000000000000009 /* AnalyticsScreen.swift in Sources */,
 				100000000000000000000010 /* ProfileScreen.swift in Sources */,
+				100000000000000000000015 /* AppleProfileStorage.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -272,10 +337,27 @@
 				100000000000000000000012 /* PortfolioScreen.swift in Sources */,
 				100000000000000000000013 /* AnalyticsScreen.swift in Sources */,
 				100000000000000000000014 /* ProfileScreen.swift in Sources */,
+				100000000000000000000016 /* AppleProfileStorage.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		800000000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000017 /* ProfileStorageTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D00000000000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 500000000000000000000001 /* CrossFolio iOS */;
+			targetProxy = D00000000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B00000000000000000000001 /* Debug */ = {
@@ -382,6 +464,38 @@
 			};
 			name = Release;
 		};
+		B00000000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.crossfolio.ios.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CrossFolio iOS.app/CrossFolio iOS";
+			};
+			name = Debug;
+		};
+		B00000000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.crossfolio.ios.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CrossFolio iOS.app/CrossFolio iOS";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -408,6 +522,15 @@
 			buildConfigurations = (
 				B00000000000000000000005 /* Debug */,
 				B00000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		600000000000000000000004 /* Build configuration list for PBXNativeTarget "CrossFolio iOSTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B00000000000000000000007 /* Debug */,
+				B00000000000000000000008 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
