@@ -41,17 +41,30 @@ final class AppleProfilePreferencesStorage: ProfilePreferencesStorage {
 final class AppleProfileSecureStorage: ProfileSecureStorage {
     private let service: String
     private let account: String
+    private let defaults: UserDefaults
+    private let installationMarker = "profile.secureStorageInitialized"
 
     init(
         service: String = Bundle.main.bundleIdentifier ?? "com.crossfolio",
-        account: String = "coinmarketcap_api_key"
+        account: String = "coinmarketcap_api_key",
+        defaults: UserDefaults = .standard
     ) {
         self.service = service
         self.account = account
+        self.defaults = defaults
+
+        // Keychain can survive uninstall; UserDefaults belongs to this installation.
+        if !defaults.bool(forKey: installationMarker) {
+            let status = SecItemDelete(baseQuery as CFDictionary)
+            if status == errSecSuccess || status == errSecItemNotFound {
+                defaults.set(true, forKey: installationMarker)
+            }
+        }
     }
 
     var coinMarketCapApiKey: String {
         get {
+            guard defaults.bool(forKey: installationMarker) else { return "" }
             var query = baseQuery
             query[kSecReturnData as String] = true
             query[kSecMatchLimit as String] = kSecMatchLimitOne
