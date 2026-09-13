@@ -1,9 +1,12 @@
 package com.crossfolio.common.assetsearch
 
 import com.crossfolio.common.asset.Asset
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class AssetSearchState(
     val message: String = "hello AssetSearchViewModel",
@@ -11,6 +14,7 @@ data class AssetSearchState(
     val assets: List<Asset> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
+    val logoUrls: Map<String, String> = emptyMap(),
 )
 
 class AssetSearchViewModel(
@@ -21,6 +25,7 @@ class AssetSearchViewModel(
     val state: StateFlow<AssetSearchState> = _state.asStateFlow()
     private var catalog: List<Asset> = emptyList()
     private var catalogLoaded = false
+    private val requestedLogos = mutableSetOf<String>()
 
     init {
         loadCatalog()
@@ -45,10 +50,38 @@ class AssetSearchViewModel(
 
     fun search(searchText: String): List<Asset> {
         val assets = catalog.filter { asset ->
-            asset.name.startsWith(searchText) || asset.ticker.startsWith(searchText)
+            asset.name.startsWith(searchText, ignoreCase = true) ||
+                asset.ticker.startsWith(searchText, ignoreCase = true)
         }
         _state.value = _state.value.copy(searchText = searchText, assets = assets)
         return assets
+    }
+
+    fun loadLogo(id: String) {
+        val manager = networkManager ?: return
+        if (!requestedLogos.add(id)) return
+        manager.fetchLogoURL(id) { result ->
+            val url = result.value ?: return@fetchLogoURL
+            if (url.startsWith("https://", ignoreCase = true)) {
+                _state.value = _state.value.copy(logoUrls = _state.value.logoUrls + (id to url))
+            }
+        }
+    }
+
+    fun loadImage(url: String, completion: (NetworkResult<ByteArray>) -> Unit) {
+        val manager = networkManager
+        if (manager == null) {
+            completion(NetworkResult(null, "Network manager is unavailable"))
+        } else {
+            manager.fetchImg(url, completion)
+        }
+    }
+
+    fun observeState(observer: (AssetSearchState) -> Unit): () -> Unit {
+        val job = CoroutineScope(Dispatchers.Main.immediate).launch {
+            state.collect { observer(it) }
+        }
+        return { job.cancel() }
     }
 
     fun onBack() {

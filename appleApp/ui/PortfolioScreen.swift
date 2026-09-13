@@ -50,18 +50,13 @@ struct PortfolioScreen: View {
                 Label("Назад", systemImage: "chevron.left")
             }
 
-            Text(assetSearchState.message)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            AssetSearchScreen(viewModel: coordinator.assetSearchViewModel)
         }
         .padding(16)
     }
 
     private var portfolioState: PortfolioState {
         coordinator.portfolioViewModel.state.value as! PortfolioState
-    }
-
-    private var assetSearchState: AssetSearchState {
-        coordinator.assetSearchViewModel.state.value as! AssetSearchState
     }
 
     private func syncRoute() {
