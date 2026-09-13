@@ -19,10 +19,15 @@ final class NetworkManager: NSObject, NetworkProtocol {
                     throw RequestError.invalidResponse
                 }
                 return try coins.map { coin in
-                    guard let id = coin["id"] as? NSNumber, let ticker = coin["symbol"] as? String else {
+                    guard let id = coin["id"] as? NSNumber, let ticker = coin["symbol"] as? String,
+                          let name = coin["name"] as? String, let slug = coin["slug"] as? String else {
                         throw RequestError.invalidResponse
                     }
-                    return Asset(searchId: id.stringValue, ticker: ticker, searchPlatform: .coinMarketCap)
+                    return Asset(
+                        searchId: id.stringValue, ticker: ticker, searchPlatform: .coinMarketCap,
+                        name: name, slug: slug,
+                        rank: (coin["rank"] as? NSNumber).map { KotlinInt(int: $0.int32Value) }
+                    )
                 } as NSArray
             }, completion: completion)
     }
@@ -191,8 +196,8 @@ private enum RequestError: Error {
 
     var message: String {
         switch self {
-        case .http(let code): "HTTP \(code)"
-        case .api(let code): "CoinMarketCap error \(code)"
+        case .http(let code): "HTTP \(code): Request failed"
+        case .api(let code): "CoinMarketCap error \(code): API request rejected"
         case .invalidResponse: "Invalid response or missing data"
         case .transport: "Network request failed"
         }

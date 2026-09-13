@@ -5,17 +5,26 @@ struct TabBarScreen: View {
     private let coordinator: TabBarCoordinator
     @State private var selectedTab: AppTab
 
-    init(coordinator: TabBarCoordinator = TabBarCoordinator(
-        portfolioCoordinator: PortfolioCoordinator(),
-        analyticsViewModel: AnalyticsViewModel(),
-        profileViewModel: ProfileViewModel(
-            preferencesStorage: AppleProfilePreferencesStorage(),
-            secureStorage: AppleProfileSecureStorage()
-        )
-    )) {
+    init(coordinator: TabBarCoordinator? = nil) {
+        let coordinator = coordinator ?? Self.makeCoordinator()
         self.coordinator = coordinator
         _selectedTab = State(
             initialValue: (coordinator.state.value as? TabBarState)?.selectedTab ?? .portfolio
+        )
+    }
+
+    private static func makeCoordinator() -> TabBarCoordinator {
+        let profileViewModel = ProfileViewModel(
+            preferencesStorage: AppleProfilePreferencesStorage(),
+            secureStorage: AppleProfileSecureStorage()
+        )
+        let networkManager = NetworkManager(apiKeyProvider: {
+            profileViewModel.getCoinMarketCapApiKey()
+        })
+        return TabBarCoordinator(
+            portfolioCoordinator: PortfolioCoordinator(networkManager: networkManager),
+            analyticsViewModel: AnalyticsViewModel(),
+            profileViewModel: profileViewModel
         )
     }
 

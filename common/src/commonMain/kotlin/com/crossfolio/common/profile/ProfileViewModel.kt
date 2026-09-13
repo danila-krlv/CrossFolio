@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 data class ProfileState(
     val userName: String = "",
     val theme: AppTheme = AppTheme.SYSTEM,
-    val coinMarketCapApiKey: String = "",
+    val hasApiKey: Boolean = false,
 )
 
 class ProfileViewModel(
@@ -16,11 +16,13 @@ class ProfileViewModel(
 ) {
     constructor() : this(null, null)
 
+    private var inMemoryApiKey = ""
+
     private val _state = MutableStateFlow(
         ProfileState(
             userName = preferencesStorage?.userName.orEmpty(),
             theme = preferencesStorage?.theme ?: AppTheme.SYSTEM,
-            coinMarketCapApiKey = secureStorage?.coinMarketCapApiKey.orEmpty(),
+            hasApiKey = getCoinMarketCapApiKey().isNotEmpty(),
         ),
     )
     val state: StateFlow<ProfileState> = _state.asStateFlow()
@@ -36,7 +38,13 @@ class ProfileViewModel(
     }
 
     fun setCoinMarketCapApiKey(apiKey: String) {
-        secureStorage?.coinMarketCapApiKey = apiKey
-        _state.value = _state.value.copy(coinMarketCapApiKey = apiKey)
+        if (secureStorage != null) {
+            secureStorage.coinMarketCapApiKey = apiKey
+        } else {
+            inMemoryApiKey = apiKey
+        }
+        _state.value = _state.value.copy(hasApiKey = getCoinMarketCapApiKey().isNotEmpty())
     }
+
+    fun getCoinMarketCapApiKey(): String = secureStorage?.coinMarketCapApiKey ?: inMemoryApiKey
 }

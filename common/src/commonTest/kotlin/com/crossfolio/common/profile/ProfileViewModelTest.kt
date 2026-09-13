@@ -2,6 +2,8 @@ package com.crossfolio.common.profile
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ProfileViewModelTest {
     @Test
@@ -16,10 +18,14 @@ class ProfileViewModelTest {
             ProfileState(
                 userName = "Danila",
                 theme = AppTheme.DARK,
-                coinMarketCapApiKey = "api-key",
+                hasApiKey = true,
             ),
             viewModel.state.value,
         )
+        assertEquals("api-key", viewModel.getCoinMarketCapApiKey())
+        assertFalse(viewModel.state.value.toString().contains("api-key"))
+        viewModel.setCoinMarketCapApiKey("")
+        assertFalse(viewModel.state.value.hasApiKey)
     }
 
     @Test
@@ -33,7 +39,8 @@ class ProfileViewModelTest {
 
         assertEquals("Danila", viewModel.state.value.userName)
         assertEquals(AppTheme.DARK, viewModel.state.value.theme)
-        assertEquals("initial-key", viewModel.state.value.coinMarketCapApiKey)
+        assertEquals("initial-key", viewModel.getCoinMarketCapApiKey())
+        assertTrue(viewModel.state.value.hasApiKey)
 
         viewModel.setUserName("Daniel")
         viewModel.setTheme(AppTheme.LIGHT)
@@ -46,10 +53,13 @@ class ProfileViewModelTest {
             ProfileState(
                 userName = "Daniel",
                 theme = AppTheme.LIGHT,
-                coinMarketCapApiKey = "updated-key",
+                hasApiKey = true,
             ),
             viewModel.state.value,
         )
+        assertFalse(viewModel.state.value.toString().contains("updated-key"))
+        secureStorage.coinMarketCapApiKey = "changed-in-storage"
+        assertEquals("changed-in-storage", viewModel.getCoinMarketCapApiKey())
     }
 }
 

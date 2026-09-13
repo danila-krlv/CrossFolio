@@ -8,4 +8,7 @@ data class Asset(
     val searchId: String,
     val ticker: String,
     val searchPlatform: SearchPlatform = SearchPlatform.COIN_MARKET_CAP,
+    val name: String = "",
+    val slug: String = "",
+    val rank: Int? = null,
 )

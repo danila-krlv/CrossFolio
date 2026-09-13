@@ -13,7 +13,7 @@ struct ProfileScreen: View {
         let state = viewModel.state.value as! ProfileState
         _userName = State(initialValue: state.userName)
         _theme = State(initialValue: state.theme)
-        _coinMarketCapApiKey = State(initialValue: state.coinMarketCapApiKey)
+        _coinMarketCapApiKey = State(initialValue: viewModel.getCoinMarketCapApiKey())
     }
 
     var body: some View {

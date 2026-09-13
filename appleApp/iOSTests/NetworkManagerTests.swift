@@ -63,7 +63,7 @@ final class NetworkManagerTests: XCTestCase {
         }
         manager.fetchPriceArray(idString: "error", idArray: ["1"]) { result in
             XCTAssertTrue(Thread.isMainThread)
-            XCTAssertEqual(result.error, "CoinMarketCap error 1001")
+            XCTAssertEqual(result.error, "CoinMarketCap error 1001: API request rejected")
             XCTAssertNil(result.value)
             api.fulfill()
         }
@@ -111,11 +111,11 @@ private final class NetworkFixtureProtocol: URLProtocol, @unchecked Sendable {
             status = id == "error" ? 401 : 200
             let body: String
             if id == "error" {
-                body = #"{"status":{"error_code":1001,"error_message":"invalid key"}}"#
+                body = #"{"status":{"error_code":1001,"error_message":"invalid test-placeholder or partial test-place"}}"#
             } else if id == "malformed" {
                 body = "invalid json"
             } else if url.path.hasSuffix("/map") {
-                body = #"{"status":{"error_code":0},"data":[{"id":1,"symbol":"BTC"},{"id":2,"symbol":"BTC"}]}"#
+                body = #"{"status":{"error_code":0},"data":[{"id":1,"symbol":"BTC","name":"Bitcoin","slug":"bitcoin","rank":1},{"id":2,"symbol":"BTC","name":"Other Bitcoin","slug":"other-bitcoin","rank":null}]}"#
             } else if url.path.hasSuffix("/info") {
                 body = #"{"status":{"error_code":0},"data":{"1":{"logo":"https://example.com/image"}}}"#
             } else {

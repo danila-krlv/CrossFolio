@@ -20,7 +20,13 @@ class NetworkManager(
             val coins = it.getJSONArray("data")
             List(coins.length()) { index ->
                 val coin = coins.getJSONObject(index)
-                Asset(searchId = coin.getString("id"), ticker = coin.getString("symbol"))
+                Asset(
+                    searchId = coin.getString("id"),
+                    ticker = coin.getString("symbol"),
+                    name = coin.getString("name"),
+                    slug = coin.getString("slug"),
+                    rank = if (coin.isNull("rank")) null else coin.getInt("rank"),
+                )
             }
         }, completion)
     }
@@ -101,7 +107,7 @@ class NetworkManager(
                 val body = connection.errorStream?.use { it.readBytes().toString(Charsets.UTF_8) }
                 val payload = body?.let { runCatching { JSONObject(it) }.getOrNull() }
                 if (apiKey != null && payload != null) checkApiStatus(payload)
-                throw IOException("HTTP $status")
+                throw SafeNetworkException("HTTP $status: Request failed")
             }
             return connection.inputStream.use { it.readBytes() }
         } finally {
@@ -110,8 +116,11 @@ class NetworkManager(
     }
 
     private fun checkApiStatus(payload: JSONObject) {
-        val code = payload.getJSONObject("status").getInt("error_code")
-        if (code != 0) throw IOException("CoinMarketCap error $code")
+        val status = payload.getJSONObject("status")
+        val code = status.getInt("error_code")
+        if (code != 0) {
+            throw SafeNetworkException("CoinMarketCap error $code: API request rejected")
+        }
     }
 
     private fun <T : Any> execute(completion: (NetworkResult<T>) -> Unit, block: () -> T) {
@@ -120,15 +129,15 @@ class NetworkManager(
                 NetworkResult(block(), null)
             } catch (error: Exception) {
                 // Transport/decoder messages can include request details; expose only safe errors.
-                val message = if (error is IOException &&
-                    (error.message?.startsWith("HTTP ") == true ||
-                        error.message?.startsWith("CoinMarketCap error ") == true)
-                ) error.message!! else "Network request or response decoding failed"
+                val message = if (error is SafeNetworkException) error.message!! else
+                    "Network request or response decoding failed"
                 NetworkResult<T>(null, message)
             }
             mainHandler.post { completion(result) }
         }
     }
+
+    private class SafeNetworkException(message: String) : IOException(message)
 
     private companion object {
         val executor = Executors.newFixedThreadPool(4)

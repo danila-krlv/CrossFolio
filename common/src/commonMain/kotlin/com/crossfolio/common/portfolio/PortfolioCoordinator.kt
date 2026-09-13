@@ -1,6 +1,7 @@
 package com.crossfolio.common.portfolio
 
 import com.crossfolio.common.assetsearch.AssetSearchViewModel
+import com.crossfolio.common.assetsearch.NetworkProtocol
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +21,7 @@ data class PortfolioNavigationState(
     val currentRoute: PortfolioRoute = backStack.last()
 }
 
-class PortfolioCoordinator {
+class PortfolioCoordinator(networkManager: NetworkProtocol? = null) {
     private val _state = MutableStateFlow(PortfolioNavigationState())
     val state: StateFlow<PortfolioNavigationState> = _state.asStateFlow()
 
@@ -29,9 +30,11 @@ class PortfolioCoordinator {
     )
     val assetSearchViewModel = AssetSearchViewModel(
         onBackRequested = ::navigateBack,
+        networkManager = networkManager,
     )
 
     private fun openAssetSearch() {
+        assetSearchViewModel.loadCatalog()
         _state.value = PortfolioNavigationState(
             backStack = _state.value.backStack + PortfolioRoute.ASSET_SEARCH,
         )
