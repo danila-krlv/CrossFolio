@@ -6,6 +6,7 @@ struct TabBarScreen: View {
     @State private var selectedTab: AppTab
     @State private var alertMessage: String?
     @State private var stopObserving: (() -> Void)?
+    @State private var stopObservingTabs: (() -> Void)?
 
     init(coordinator: TabBarCoordinator? = nil) {
         let coordinator = coordinator ?? Self.makeCoordinator()
@@ -52,10 +53,14 @@ struct TabBarScreen: View {
         .onAppear {
             stopObserving?()
             stopObserving = coordinator.portfolioCoordinator.observeState { alertMessage = $0.alertMessage }
+            stopObservingTabs?()
+            stopObservingTabs = coordinator.observeState { selectedTab = $0.selectedTab }
         }
         .onDisappear {
             stopObserving?()
             stopObserving = nil
+            stopObservingTabs?()
+            stopObservingTabs = nil
         }
         .alert("API-ключ CoinMarketCap", isPresented: alertPresented) {
             Button("ОК") { coordinator.portfolioCoordinator.dismissAlert() }

@@ -134,7 +134,7 @@ class AssetSearchViewModelTest {
     }
 
     @Test
-    fun returningFromProfileRevalidatesPreviouslyOpenedSearch() {
+    fun changingProfileKeyResetsNavigationAndNextSearchRevalidates() {
         val profile = ProfileViewModel()
         profile.setCoinMarketCapApiKey("first-placeholder")
         val network = FakeNetwork(profile::getCoinMarketCapApiKey)
@@ -145,10 +145,26 @@ class AssetSearchViewModelTest {
         network.complete(NetworkResult(catalog, null))
         tabs.selectTab(AppTab.PROFILE)
         profile.setCoinMarketCapApiKey("second-placeholder")
-        tabs.selectTab(AppTab.PORTFOLIO)
+        assertEquals(AppTab.PORTFOLIO, tabs.state.value.selectedTab)
+        assertEquals(PortfolioRoute.PORTFOLIO, portfolio.state.value.currentRoute)
+        assertNull(portfolio.state.value.alertMessage)
+        assertEquals(2, network.mapRequests)
+        portfolio.openAssetSearch()
         assertTrue(portfolio.assetSearchViewModel.state.value.assets.isEmpty())
         assertEquals(listOf("first-placeholder", "first-placeholder", "second-placeholder"), network.keys)
         network.complete(NetworkResult(catalog, null))
+    }
+
+    @Test
+    fun navigationResetIgnoresPendingValidation() {
+        val network = FakeNetwork()
+        val portfolio = PortfolioCoordinator(network, { "placeholder-key" })
+        network.complete(NetworkResult(catalog, null))
+        portfolio.openAssetSearch()
+        portfolio.resetNavigation()
+        network.complete(NetworkResult(catalog, null))
+        assertEquals(PortfolioRoute.PORTFOLIO, portfolio.state.value.currentRoute)
+        assertNull(portfolio.state.value.alertMessage)
     }
 
     @Test

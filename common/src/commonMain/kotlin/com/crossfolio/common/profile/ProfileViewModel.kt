@@ -16,6 +16,8 @@ class ProfileViewModel(
 ) {
     constructor() : this(null, null)
 
+    internal var onApiKeyChanged: () -> Unit = {}
+
     private var inMemoryApiKey = ""
 
     private val _state = MutableStateFlow(
@@ -38,12 +40,15 @@ class ProfileViewModel(
     }
 
     fun setCoinMarketCapApiKey(apiKey: String) {
+        val previousKey = getCoinMarketCapApiKey()
         if (secureStorage != null) {
             secureStorage.coinMarketCapApiKey = apiKey
         } else {
             inMemoryApiKey = apiKey
         }
-        _state.value = _state.value.copy(hasApiKey = getCoinMarketCapApiKey().isNotEmpty())
+        val savedKey = getCoinMarketCapApiKey()
+        _state.value = _state.value.copy(hasApiKey = savedKey.isNotEmpty())
+        if (savedKey != previousKey) onApiKeyChanged()
     }
 
     fun getCoinMarketCapApiKey(): String = secureStorage?.coinMarketCapApiKey ?: inMemoryApiKey

@@ -41,15 +41,26 @@ class PortfolioCoordinator(
         apiKeyProvider = apiKeyProvider,
     )
 
+    private var navigationVersion = 0
+
     init {
+        val version = navigationVersion
         assetSearchViewModel.openSearch { valid ->
+            if (version != navigationVersion) return@openSearch
             if (!valid) showValidationAlert()
         }
     }
 
+    fun resetNavigation() {
+        navigationVersion++
+        _state.value = PortfolioNavigationState()
+    }
+
     fun openAssetSearch() {
+        val version = ++navigationVersion
         _state.value = _state.value.copy(backStack = listOf(PortfolioRoute.PORTFOLIO), alertMessage = null)
         assetSearchViewModel.openSearch { valid ->
+            if (version != navigationVersion) return@openSearch
             if (valid) {
                 _state.value = _state.value.copy(
                     backStack = listOf(PortfolioRoute.PORTFOLIO, PortfolioRoute.ASSET_SEARCH),

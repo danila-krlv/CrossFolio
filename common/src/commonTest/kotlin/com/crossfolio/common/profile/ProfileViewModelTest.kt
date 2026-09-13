@@ -7,6 +7,19 @@ import kotlin.test.assertTrue
 
 class ProfileViewModelTest {
     @Test
+    fun notifiesOnlyAfterStoredKeyChanges() {
+        val model = ProfileViewModel()
+        var changes = 0
+        model.onApiKeyChanged = { changes++ }
+        model.setCoinMarketCapApiKey("placeholder")
+        model.setCoinMarketCapApiKey("placeholder")
+        model.setUserName("Danila")
+        assertEquals(1, changes)
+        model.setCoinMarketCapApiKey("")
+        assertEquals(2, changes)
+    }
+
+    @Test
     fun doesNotCacheInputWhenSecureStorageRejectsWrite() {
         val storage = object : ProfileSecureStorage {
             override var coinMarketCapApiKey: String
