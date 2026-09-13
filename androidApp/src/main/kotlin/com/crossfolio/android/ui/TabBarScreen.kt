@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -22,8 +24,19 @@ fun TabBarScreen(
     coordinator: TabBarCoordinator = remember { TabBarCoordinator() },
 ) {
     val state by coordinator.state.collectAsState()
+    val portfolioState by coordinator.portfolioCoordinator.state.collectAsState()
 
     MaterialTheme {
+        portfolioState.alertMessage?.let { message ->
+            AlertDialog(
+                onDismissRequest = coordinator.portfolioCoordinator::dismissAlert,
+                title = { Text("API-ключ CoinMarketCap") },
+                text = { Text(message) },
+                confirmButton = {
+                    TextButton(onClick = coordinator.portfolioCoordinator::dismissAlert) { Text("ОК") }
+                },
+            )
+        }
         Scaffold(
             bottomBar = {
                 NavigationBar {

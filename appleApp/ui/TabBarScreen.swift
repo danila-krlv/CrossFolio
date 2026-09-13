@@ -4,6 +4,8 @@ import SwiftUI
 struct TabBarScreen: View {
     private let coordinator: TabBarCoordinator
     @State private var selectedTab: AppTab
+    @State private var alertMessage: String?
+    @State private var stopObserving: (() -> Void)?
 
     init(coordinator: TabBarCoordinator? = nil) {
         let coordinator = coordinator ?? Self.makeCoordinator()
@@ -11,6 +13,8 @@ struct TabBarScreen: View {
         _selectedTab = State(
             initialValue: (coordinator.state.value as? TabBarState)?.selectedTab ?? .portfolio
         )
+        _alertMessage = State(initialValue:
+            (coordinator.portfolioCoordinator.state.value as? PortfolioNavigationState)?.alertMessage)
     }
 
     private static func makeCoordinator() -> TabBarCoordinator {
@@ -22,7 +26,10 @@ struct TabBarScreen: View {
             profileViewModel.getCoinMarketCapApiKey()
         })
         return TabBarCoordinator(
-            portfolioCoordinator: PortfolioCoordinator(networkManager: networkManager),
+            portfolioCoordinator: PortfolioCoordinator(
+                networkManager: networkManager,
+                apiKeyProvider: { profileViewModel.getCoinMarketCapApiKey() }
+            ),
             analyticsViewModel: AnalyticsViewModel(),
             profileViewModel: profileViewModel
         )
@@ -42,6 +49,31 @@ struct TabBarScreen: View {
                 .tabItem { Label("Профиль", systemImage: "person") }
                 .tag(AppTab.profile)
         }
+        .onAppear {
+            stopObserving?()
+            stopObserving = coordinator.portfolioCoordinator.observeState { alertMessage = $0.alertMessage }
+        }
+        .onDisappear {
+            stopObserving?()
+            stopObserving = nil
+        }
+        .alert("API-ключ CoinMarketCap", isPresented: alertPresented) {
+            Button("ОК") { coordinator.portfolioCoordinator.dismissAlert() }
+        } message: {
+            Text(alertMessage ?? "")
+        }
+    }
+
+    private var alertPresented: Binding<Bool> {
+        Binding(
+            get: { alertMessage != nil },
+            set: { presented in
+                if !presented {
+                    coordinator.portfolioCoordinator.dismissAlert()
+                    alertMessage = nil
+                }
+            }
+        )
     }
 
     private var selection: Binding<AppTab> {

@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
                 networkManager = NetworkManager {
                     profileViewModel.getCoinMarketCapApiKey()
                 },
+                apiKeyProvider = profileViewModel::getCoinMarketCapApiKey,
             ),
             profileViewModel = profileViewModel,
         )

@@ -30,7 +30,7 @@ struct AssetSearchScreen: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if state.error != nil {
                 Text("Не удалось загрузить каталог. Проверьте API-ключ в профиле и подключение к интернету.")
-                Button("Повторить") { viewModel.loadCatalog() }
+                Button("Повторить") { viewModel.openSearch() }
                 Spacer()
             } else if state.assets.isEmpty {
                 Text("Монеты не найдены")

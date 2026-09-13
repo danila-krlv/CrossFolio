@@ -15,34 +15,80 @@ data class AssetSearchState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val logoUrls: Map<String, String> = emptyMap(),
+    val isApiKeyInvalid: Boolean = false,
 )
 
 class AssetSearchViewModel(
     private val onBackRequested: () -> Unit,
     private val networkManager: NetworkProtocol? = null,
+    private val apiKeyProvider: (() -> String)? = null,
 ) {
     private val _state = MutableStateFlow(AssetSearchState())
     val state: StateFlow<AssetSearchState> = _state.asStateFlow()
     private var catalog: List<Asset> = emptyList()
     private var catalogLoaded = false
+    private var requestNumber = 0
 
-    init {
-        loadCatalog()
+    fun openSearch() {
+        openSearch {}
     }
 
-    fun loadCatalog() {
+    fun openSearch(onValidated: (Boolean) -> Unit) {
+        val key = apiKeyProvider?.invoke()?.trim().orEmpty()
+        if (key.isEmpty() || key.any { it.isWhitespace() }) {
+            requestNumber++
+            catalog = emptyList()
+            catalogLoaded = false
+            _state.value = _state.value.copy(assets = emptyList(), isLoading = false,
+                error = "API key is missing or malformed", isApiKeyInvalid = true)
+            onValidated(false)
+            return
+        }
+        if (networkManager == null) {
+            _state.value = _state.value.copy(error = "Network manager is unavailable", isApiKeyInvalid = false)
+            onValidated(false)
+            return
+        }
+        requestCatalog(forceRefresh = true, onValidated)
+    }
+
+    fun loadCatalog(forceRefresh: Boolean = false) {
+        requestCatalog(forceRefresh) {}
+    }
+
+    private fun requestCatalog(forceRefresh: Boolean, onValidated: (Boolean) -> Unit) {
         val manager = networkManager ?: return
-        if (catalogLoaded || _state.value.isLoading) return
-        _state.value = _state.value.copy(isLoading = true, error = null)
+        if (!forceRefresh && (catalogLoaded || _state.value.isLoading)) return
+        if (forceRefresh) {
+            catalog = emptyList()
+            catalogLoaded = false
+            _state.value = _state.value.copy(assets = emptyList())
+        }
+        val currentRequest = ++requestNumber
+        val requestKey = apiKeyProvider?.invoke()
+        _state.value = _state.value.copy(isLoading = true, error = null, isApiKeyInvalid = false)
         manager.fetchMap { result ->
+            if (currentRequest != requestNumber) return@fetchMap
+            if (requestKey != apiKeyProvider?.invoke()) {
+                _state.value = _state.value.copy(isLoading = false)
+                return@fetchMap
+            }
             val assets = result.value
             if (assets != null) {
                 catalog = assets.toList()
                 catalogLoaded = true
                 _state.value = _state.value.copy(isLoading = false, error = null)
                 search(_state.value.searchText)
+                onValidated(true)
             } else {
                 _state.value = _state.value.copy(isLoading = false, error = result.error)
+                val invalidKey = result.error?.let { message ->
+                    message.startsWith("HTTP 401:") || listOf(1001, 1002, 1005, 1007).any {
+                        message.startsWith("CoinMarketCap error $it:")
+                    }
+                } == true
+                _state.value = _state.value.copy(isApiKeyInvalid = invalidKey)
+                onValidated(false)
             }
         }
     }
