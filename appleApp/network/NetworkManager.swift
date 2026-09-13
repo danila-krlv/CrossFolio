@@ -138,8 +138,9 @@ final class NetworkManager: NSObject, NetworkProtocol {
                     throw RequestError.invalidResponse
                 }
                 guard (200..<300).contains(response.statusCode) else {
-                    if isAPI, let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                        try Self.checkAPIStatus(payload)
+                    if isAPI, let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let code = Self.apiErrorCode(payload), code != 0 {
+                        throw RequestError.api(code)
                     }
                     throw RequestError.http(response.statusCode)
                 }
@@ -155,11 +156,14 @@ final class NetworkManager: NSObject, NetworkProtocol {
     }
 
     private static func checkAPIStatus(_ payload: [String: Any]) throws {
-        let status = payload["status"] as? [String: Any]
-        let code = (status?["error_code"] as? NSNumber)?.intValue
-            ?? (status?["error_code"] as? String).flatMap(Int.init)
-        guard let code else { throw RequestError.invalidResponse }
+        guard let code = apiErrorCode(payload) else { throw RequestError.invalidResponse }
         if code != 0 { throw RequestError.api(code) }
+    }
+
+    private static func apiErrorCode(_ payload: [String: Any]) -> Int? {
+        let status = payload["status"] as? [String: Any]
+        return (status?["error_code"] as? NSNumber)?.intValue
+            ?? (status?["error_code"] as? String).flatMap(Int.init)
     }
 
     private func deliverFailure<T: AnyObject>(
@@ -170,7 +174,7 @@ final class NetworkManager: NSObject, NetworkProtocol {
     }
 }
 
-private final class RedirectDelegate: NSObject, URLSessionTaskDelegate {
+final class RedirectDelegate: NSObject, URLSessionTaskDelegate {
     func urlSession(
         _ session: URLSession, task: URLSessionTask,
         willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,

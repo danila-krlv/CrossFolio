@@ -7,6 +7,20 @@ import kotlin.test.assertTrue
 
 class ProfileViewModelTest {
     @Test
+    fun doesNotCacheInputWhenSecureStorageRejectsWrite() {
+        val storage = object : ProfileSecureStorage {
+            override var coinMarketCapApiKey: String
+                get() = ""
+                set(value) {}
+        }
+        val viewModel = ProfileViewModel(null, storage)
+        viewModel.setCoinMarketCapApiKey("rejected-placeholder")
+        assertFalse(viewModel.state.value.hasApiKey)
+        assertEquals("", viewModel.getCoinMarketCapApiKey())
+        assertFalse(viewModel.state.value.toString().contains("rejected-placeholder"))
+    }
+
+    @Test
     fun updatesStateWithoutPlatformStorages() {
         val viewModel = ProfileViewModel()
 

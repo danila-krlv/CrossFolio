@@ -12,9 +12,15 @@ import java.net.URL
 import java.util.concurrent.Executors
 import org.json.JSONObject
 
-class NetworkManager(
+class NetworkManager internal constructor(
     private val apiKeyProvider: () -> String,
+    private val connectionFactory: (URL) -> HttpURLConnection,
 ) : NetworkProtocol {
+    constructor(apiKeyProvider: () -> String) : this(
+        apiKeyProvider,
+        { it.openConnection() as HttpURLConnection },
+    )
+
     override fun fetchMap(completion: (NetworkResult<List<Asset>>) -> Unit) {
         request("v1/cryptocurrency/map", mapOf("start" to "1", "limit" to "1000"), {
             val coins = it.getJSONArray("data")
@@ -92,7 +98,7 @@ class NetworkManager(
 
     private fun download(url: URL, apiKey: String?): ByteArray {
         require(url.protocol in listOf("http", "https") && url.host.isNotEmpty()) { "Invalid URL" }
-        val connection = url.openConnection() as HttpURLConnection
+        val connection = connectionFactory(url)
         try {
             connection.connectTimeout = 15_000
             connection.readTimeout = 30_000
@@ -106,7 +112,10 @@ class NetworkManager(
             if (status !in 200..299) {
                 val body = connection.errorStream?.use { it.readBytes().toString(Charsets.UTF_8) }
                 val payload = body?.let { runCatching { JSONObject(it) }.getOrNull() }
-                if (apiKey != null && payload != null) checkApiStatus(payload)
+                val code = payload?.optJSONObject("status")?.optInt("error_code", 0) ?: 0
+                if (apiKey != null && code != 0) {
+                    throw SafeNetworkException("CoinMarketCap error $code: API request rejected")
+                }
                 throw SafeNetworkException("HTTP $status: Request failed")
             }
             return connection.inputStream.use { it.readBytes() }

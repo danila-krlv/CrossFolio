@@ -1,5 +1,10 @@
 import Common
 import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct AssetSearchScreen: View {
     let viewModel: AssetSearchViewModel
@@ -66,16 +71,7 @@ private struct AssetSearchRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImage(url: logoURL.flatMap(URL.init(string:))) { phase in
-                if let image = phase.image {
-                    image.resizable().scaledToFit()
-                } else {
-                    Image(systemName: "circle.dotted")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(width: 44, height: 44)
-            .accessibilityHidden(true)
+            AssetLogo(url: logoURL)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(asset.ticker).font(.headline)
@@ -84,5 +80,48 @@ private struct AssetSearchRow: View {
             Spacer(minLength: 0)
         }
         .padding(.vertical, 4)
+    }
+}
+
+private struct AssetLogo: View {
+    let url: String?
+    @State private var image: Image?
+    @State private var isLoading = false
+
+    var body: some View {
+        ZStack {
+            if let image {
+                image.resizable().scaledToFit()
+            } else if isLoading {
+                ProgressView()
+            } else {
+                Image(systemName: "photo").foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 44, height: 44)
+        .accessibilityHidden(true)
+        .task(id: url) { await load() }
+    }
+
+    @MainActor
+    private func load() async {
+        image = nil
+        isLoading = false
+        guard let url, let address = URL(string: url), address.scheme == "https" else { return }
+        isLoading = true
+        defer { if !Task.isCancelled { isLoading = false } }
+        do {
+            // Public CDN request: no profile key or authenticated headers.
+            let (data, response) = try await URLSession.shared.data(from: address)
+            guard !Task.isCancelled, let response = response as? HTTPURLResponse,
+                  (200..<300).contains(response.statusCode) else { return }
+            #if os(iOS)
+            if let decoded = UIImage(data: data) { image = Image(uiImage: decoded) }
+            #else
+            if let decoded = NSImage(data: data) { image = Image(nsImage: decoded) }
+            #endif
+        } catch {
+            // Keep a placeholder after a failure; appearing again starts a fresh attempt.
+        }
     }
 }

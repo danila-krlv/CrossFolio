@@ -25,7 +25,6 @@ class AssetSearchViewModel(
     val state: StateFlow<AssetSearchState> = _state.asStateFlow()
     private var catalog: List<Asset> = emptyList()
     private var catalogLoaded = false
-    private val requestedLogos = mutableSetOf<String>()
 
     init {
         loadCatalog()
@@ -58,14 +57,11 @@ class AssetSearchViewModel(
     }
 
     fun loadLogo(id: String) {
-        val manager = networkManager ?: return
-        if (!requestedLogos.add(id)) return
-        manager.fetchLogoURL(id) { result ->
-            val url = result.value ?: return@fetchLogoURL
-            if (url.startsWith("https://", ignoreCase = true)) {
-                _state.value = _state.value.copy(logoUrls = _state.value.logoUrls + (id to url))
-            }
-        }
+        if (id in _state.value.logoUrls) return
+        if (id.isEmpty() || !id.all { it in '0'..'9' }) return
+        // CoinMarketCap publishes logos on its CDN by numeric CMC id, without an API request.
+        val url = "https://s2.coinmarketcap.com/static/img/coins/64x64/$id.png"
+        _state.value = _state.value.copy(logoUrls = _state.value.logoUrls + (id to url))
     }
 
     fun loadImage(url: String, completion: (NetworkResult<ByteArray>) -> Unit) {
