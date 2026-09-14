@@ -4,6 +4,7 @@ import SwiftUI
 struct PortfolioScreen: View {
     private let coordinator: PortfolioCoordinator
     @State private var currentRoute: PortfolioRoute
+    @State private var stopObserving: (() -> Void)?
 
     init(coordinator: PortfolioCoordinator) {
         self.coordinator = coordinator
@@ -14,10 +15,20 @@ struct PortfolioScreen: View {
     }
 
     var body: some View {
-        if currentRoute == .portfolio {
-            portfolioContent
-        } else {
-            assetSearchContent
+        Group {
+            if currentRoute == .portfolio {
+                portfolioContent
+            } else {
+                assetSearchContent
+            }
+        }
+        .onAppear {
+            stopObserving?()
+            stopObserving = coordinator.observeState { currentRoute = $0.currentRoute }
+        }
+        .onDisappear {
+            stopObserving?()
+            stopObserving = nil
         }
     }
 
@@ -50,18 +61,13 @@ struct PortfolioScreen: View {
                 Label("Назад", systemImage: "chevron.left")
             }
 
-            Text(assetSearchState.message)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            AssetSearchScreen(viewModel: coordinator.assetSearchViewModel)
         }
         .padding(16)
     }
 
     private var portfolioState: PortfolioState {
         coordinator.portfolioViewModel.state.value as! PortfolioState
-    }
-
-    private var assetSearchState: AssetSearchState {
-        coordinator.assetSearchViewModel.state.value as! AssetSearchState
     }
 
     private func syncRoute() {

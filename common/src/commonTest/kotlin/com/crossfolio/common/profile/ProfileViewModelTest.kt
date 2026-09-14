@@ -2,8 +2,37 @@ package com.crossfolio.common.profile
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ProfileViewModelTest {
+    @Test
+    fun notifiesOnlyAfterStoredKeyChanges() {
+        val model = ProfileViewModel()
+        var changes = 0
+        model.onApiKeyChanged = { changes++ }
+        model.setCoinMarketCapApiKey("placeholder")
+        model.setCoinMarketCapApiKey("placeholder")
+        model.setUserName("Danila")
+        assertEquals(1, changes)
+        model.setCoinMarketCapApiKey("")
+        assertEquals(2, changes)
+    }
+
+    @Test
+    fun doesNotCacheInputWhenSecureStorageRejectsWrite() {
+        val storage = object : ProfileSecureStorage {
+            override var coinMarketCapApiKey: String
+                get() = ""
+                set(value) {}
+        }
+        val viewModel = ProfileViewModel(null, storage)
+        viewModel.setCoinMarketCapApiKey("rejected-placeholder")
+        assertFalse(viewModel.state.value.hasApiKey)
+        assertEquals("", viewModel.getCoinMarketCapApiKey())
+        assertFalse(viewModel.state.value.toString().contains("rejected-placeholder"))
+    }
+
     @Test
     fun updatesStateWithoutPlatformStorages() {
         val viewModel = ProfileViewModel()
@@ -16,10 +45,14 @@ class ProfileViewModelTest {
             ProfileState(
                 userName = "Danila",
                 theme = AppTheme.DARK,
-                coinMarketCapApiKey = "api-key",
+                hasApiKey = true,
             ),
             viewModel.state.value,
         )
+        assertEquals("api-key", viewModel.getCoinMarketCapApiKey())
+        assertFalse(viewModel.state.value.toString().contains("api-key"))
+        viewModel.setCoinMarketCapApiKey("")
+        assertFalse(viewModel.state.value.hasApiKey)
     }
 
     @Test
@@ -33,7 +66,8 @@ class ProfileViewModelTest {
 
         assertEquals("Danila", viewModel.state.value.userName)
         assertEquals(AppTheme.DARK, viewModel.state.value.theme)
-        assertEquals("initial-key", viewModel.state.value.coinMarketCapApiKey)
+        assertEquals("initial-key", viewModel.getCoinMarketCapApiKey())
+        assertTrue(viewModel.state.value.hasApiKey)
 
         viewModel.setUserName("Daniel")
         viewModel.setTheme(AppTheme.LIGHT)
@@ -46,10 +80,13 @@ class ProfileViewModelTest {
             ProfileState(
                 userName = "Daniel",
                 theme = AppTheme.LIGHT,
-                coinMarketCapApiKey = "updated-key",
+                hasApiKey = true,
             ),
             viewModel.state.value,
         )
+        assertFalse(viewModel.state.value.toString().contains("updated-key"))
+        secureStorage.coinMarketCapApiKey = "changed-in-storage"
+        assertEquals("changed-in-storage", viewModel.getCoinMarketCapApiKey())
     }
 }
 

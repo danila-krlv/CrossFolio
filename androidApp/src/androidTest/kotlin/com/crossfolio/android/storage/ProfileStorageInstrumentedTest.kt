@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Context
 import android.os.Bundle
+import com.crossfolio.android.network.NetworkManagerChecks
 import com.crossfolio.common.profile.AppTheme
 import java.security.KeyStore
 import java.util.UUID
@@ -17,7 +18,10 @@ class ProfileStorageInstrumentation : Instrumentation() {
     override fun onStart() {
         testPreferencesStoragePersistsUserNameAndTheme()
         testSecureStorageEncryptsAndPersistsApiKey()
-        finish(Activity.RESULT_OK, Bundle().apply { putString("result", "2 storage tests passed") })
+        val networkTests = NetworkManagerChecks.run()
+        finish(Activity.RESULT_OK, Bundle().apply {
+            putString("result", "2 storage and $networkTests network tests passed")
+        })
     }
 
     private fun testPreferencesStoragePersistsUserNameAndTheme() {
