@@ -89,10 +89,10 @@ final class NetworkManagerTests: XCTestCase {
         wait(for: [missing, api, malformed, invalid, key], timeout: 3)
     }
 
-    private func makeManager(_ key: @escaping () -> String) -> NetworkManager {
+    private func makeManager(_ key: @escaping () -> String) -> CoinMarketCapClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [NetworkFixtureProtocol.self]
-        return NetworkManager(apiKeyProvider: key, session: URLSession(configuration: configuration))
+        return CoinMarketCapClient(transport: NetworkManager(session: URLSession(configuration: configuration)), apiKeyProvider: key)
     }
 
     func testHTTPCodeIsPreservedWhenErrorBodyHasNoStatus() {
@@ -126,7 +126,7 @@ final class NetworkManagerTests: XCTestCase {
 
     @MainActor
     func testSearchObservationReceivesAsyncUpdatesAndCancels() {
-        let model = AssetSearchViewModel(onBackRequested: {}, networkManager: nil, apiKeyProvider: nil)
+        let model = AssetSearchViewModel(onBackRequested: {}, assetCatalog: nil, imageLoader: nil, onAssetSelected: { _ in })
         let received = expectation(description: "state received")
         let cancelled = expectation(description: "no updates after cancellation")
         cancelled.isInverted = true
@@ -154,6 +154,7 @@ final class NetworkManagerTests: XCTestCase {
         var authenticated = URLRequest(url: source)
         authenticated.setValue("test-placeholder", forHTTPHeaderField: "X-CMC_PRO_API_KEY")
         let apiTask = session.dataTask(with: authenticated)
+        apiTask.taskDescription = "block-redirects"
         let imageTask = session.dataTask(with: URLRequest(url: source))
         defer { apiTask.cancel(); imageTask.cancel() }
         var callbacks = 0

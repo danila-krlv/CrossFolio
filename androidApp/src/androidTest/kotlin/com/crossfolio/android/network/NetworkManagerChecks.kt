@@ -1,7 +1,9 @@
 package com.crossfolio.android.network
 
+import android.os.Handler
 import android.os.Looper
-import com.crossfolio.common.portfolio.assetsearch.NetworkResult
+import com.crossfolio.common.core.network.CoinMarketCapClient
+import com.crossfolio.common.core.network.NetworkResult
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -27,7 +29,7 @@ object NetworkManagerChecks {
                 {"id":2,"symbol":"ETH","name":"Other Ethereum","slug":"other","rank":null}]}""",
         )
         var requestedURL: URL? = null
-        val manager = NetworkManager({ key }, { requestedURL = it; connection })
+        val manager = CoinMarketCapClient(NetworkManager { requestedURL = it; connection }) { key }
         key = "test-placeholder"
         val result = awaitResult(manager::fetchMap)
         check(result.error == null)
@@ -49,7 +51,7 @@ object NetworkManagerChecks {
     private fun metadataAndQuotesUseCMCIDs() {
         val metadata = FixtureConnection(body =
             """{"status":{"error_code":0},"data":{"1":{"logo":"https://example.com/1.png"}}}""")
-        val manager = NetworkManager({ "test-placeholder" }, { metadata })
+        val manager = CoinMarketCapClient(NetworkManager { metadata }) { "test-placeholder" }
         val logo = awaitResult<String> { manager.fetchLogoURL("1", it) }
         check(logo.value == "https://example.com/1.png")
         val missing = awaitResult<Map<String, String>> {
@@ -60,7 +62,7 @@ object NetworkManagerChecks {
         val prices = FixtureConnection(body = """{"status":{"error_code":0},"data":{
             "1":{"quote":{"USD":{"price":12.5}}},"2":{"quote":{"USD":{"price":20}}}}}""")
         var query: String? = null
-        val quotes = NetworkManager({ "test-placeholder" }, { query = it.query; prices })
+        val quotes = CoinMarketCapClient(NetworkManager { query = it.query; prices }) { "test-placeholder" }
         val result = awaitResult<Map<String, Double>> {
             quotes.fetchPriceArray("1,2", listOf("1", "2"), it)
         }
@@ -72,7 +74,7 @@ object NetworkManagerChecks {
 
     private fun imagesDoNotReadOrTransmitKey() {
         val connection = FixtureConnection(bytes = byteArrayOf(0, -1, 127))
-        val manager = NetworkManager({ error("Image must not read API key") }, { connection })
+        val manager = CoinMarketCapClient(NetworkManager { connection }) { error("Image must not read API key") }
         val result = awaitResult<ByteArray> { manager.fetchImg("https://example.com/1.png", it) }
         check(result.value?.contentEquals(byteArrayOf(0, -1, 127)) == true)
         check(connection.getRequestProperty("X-CMC_PRO_API_KEY") == null)
@@ -87,21 +89,21 @@ object NetworkManagerChecks {
                 "CoinMarketCap error 1001: API request rejected",
             FixtureConnection(429, """{"error":"test-placeholder"}""") to "HTTP 429: Request failed",
             FixtureConnection(body = "invalid test-placeholder") to
-                "Network request or response decoding failed",
+                "Invalid response or missing data",
             FixtureConnection(body = """{"status":{"error_code":0}}""") to
-                "Network request or response decoding failed",
+                "Invalid response or missing data",
             FixtureConnection(failure = IOException("test-placeholder")) to
-                "Network request or response decoding failed",
+                "Network request failed",
         )
         for ((connection, expected) in fixtures) {
-            val result = awaitResult(NetworkManager({ "test-placeholder" }, { connection })::fetchMap)
+            val result = awaitResult((CoinMarketCapClient(NetworkManager { connection }) { "test-placeholder" })::fetchMap)
             check(result.value == null && result.error == expected)
             check(connection.disconnected)
         }
     }
 
     private fun missingKeyAndInvalidURLDoNotOpenConnections() {
-        val manager = NetworkManager({ "" }, { error("Connection must not be opened") })
+        val manager = CoinMarketCapClient(NetworkManager { error("Connection must not be opened") }) { "" }
         check(awaitResult(manager::fetchMap).error == "API key is unavailable")
         val invalid = awaitResult<ByteArray> { manager.fetchImg("file:///image", it) }
         check(invalid.value == null && invalid.error != null)
@@ -111,10 +113,12 @@ object NetworkManagerChecks {
         val latch = CountDownLatch(1)
         var result: NetworkResult<T>? = null
         var onMainThread = false
-        action {
-            onMainThread = Looper.myLooper() == Looper.getMainLooper()
-            result = it
-            latch.countDown()
+        Handler(Looper.getMainLooper()).post {
+            action {
+                onMainThread = Looper.myLooper() == Looper.getMainLooper()
+                result = it
+                latch.countDown()
+            }
         }
         check(latch.await(5, TimeUnit.SECONDS)) { "Network completion timed out" }
         check(onMainThread) { "Completion must run on main thread" }

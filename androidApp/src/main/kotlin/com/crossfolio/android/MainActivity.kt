@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.crossfolio.android.network.NetworkManager
+import com.crossfolio.common.core.network.CoinMarketCapClient
 import com.crossfolio.android.storage.AndroidProfilePreferencesStorage
 import com.crossfolio.android.storage.AndroidProfileSecureStorage
 import com.crossfolio.android.ui.navigation.TabBarScreen
@@ -20,10 +21,9 @@ class MainActivity : ComponentActivity() {
         )
         val coordinator = TabBarCoordinator(
             portfolioCoordinator = PortfolioCoordinator(
-                networkManager = NetworkManager {
+                networkManager = CoinMarketCapClient(NetworkManager()) {
                     profileViewModel.getCoinMarketCapApiKey()
                 },
-                apiKeyProvider = profileViewModel::getCoinMarketCapApiKey,
             ),
             profileViewModel = profileViewModel,
         )

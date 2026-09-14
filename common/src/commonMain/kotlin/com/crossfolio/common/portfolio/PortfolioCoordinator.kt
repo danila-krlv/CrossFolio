@@ -2,7 +2,7 @@ package com.crossfolio.common.portfolio
 
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.portfolio.assetsearch.AssetSearchViewModel
-import com.crossfolio.common.portfolio.assetsearch.NetworkProtocol
+import com.crossfolio.common.core.network.NetworkProtocol
 import com.crossfolio.common.portfolio.edit.EditViewModel
 import com.crossfolio.common.portfolio.overview.PortfolioViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +31,6 @@ data class PortfolioNavigationState(
 
 class PortfolioCoordinator(
     networkManager: NetworkProtocol? = null,
-    apiKeyProvider: (() -> String)? = null,
 ) {
     private val _state = MutableStateFlow(PortfolioNavigationState())
     val state: StateFlow<PortfolioNavigationState> = _state.asStateFlow()
@@ -43,8 +42,8 @@ class PortfolioCoordinator(
     )
     val assetSearchViewModel = AssetSearchViewModel(
         onBackRequested = ::navigateBack,
-        networkManager = networkManager,
-        apiKeyProvider = apiKeyProvider,
+        assetCatalog = networkManager,
+        imageLoader = networkManager?.let { it::fetchImg },
         onAssetSelected = ::openEdit,
     )
 

@@ -1,6 +1,9 @@
 package com.crossfolio.common.portfolio.assetsearch
 
 import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.core.network.NetworkFailure
+import com.crossfolio.common.core.network.NetworkProtocol
+import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.navigation.AppTab
 import com.crossfolio.common.navigation.TabBarCoordinator
 import com.crossfolio.common.portfolio.PortfolioCoordinator
@@ -23,7 +26,7 @@ class AssetSearchViewModelTest {
     @Test
     fun selectingAssetOpensEditAndBackPreservesSearch() {
         val network = FakeNetwork()
-        val coordinator = PortfolioCoordinator(network, { "placeholder-key" })
+        val coordinator = portfolio(network, { "placeholder-key" })
         network.complete(NetworkResult(catalog, null))
         coordinator.openAssetSearch()
         network.complete(NetworkResult(catalog, null))
@@ -47,7 +50,7 @@ class AssetSearchViewModelTest {
     @Test
     fun missingKeyShowsSameAlertAtStartupAndOnSearchAttempt() {
         val network = FakeNetwork()
-        val coordinator = PortfolioCoordinator(network, { "" })
+        val coordinator = portfolio(network, { "" })
         val message = coordinator.state.value.alertMessage
         assertEquals("Добавьте действительный API-ключ CoinMarketCap в профиле.", message)
         assertEquals(0, network.mapRequests)
@@ -63,15 +66,15 @@ class AssetSearchViewModelTest {
     fun invalidKeyNeverOpensSearchAndCorrectedKeyOpensOnlyAfterValidation() {
         var key = "invalid-placeholder"
         val network = FakeNetwork { key }
-        val coordinator = PortfolioCoordinator(network, { key })
-        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected"))
+        val coordinator = portfolio(network, { key })
+        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected", NetworkFailure.INVALID_KEY))
         val message = coordinator.state.value.alertMessage
         assertTrue(message != null)
         coordinator.dismissAlert()
         coordinator.portfolioViewModel.onAssetSearch()
         assertEquals(PortfolioRoute.PORTFOLIO, coordinator.state.value.currentRoute)
         assertNull(coordinator.state.value.alertMessage)
-        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected"))
+        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected", NetworkFailure.INVALID_KEY))
         assertEquals(message, coordinator.state.value.alertMessage)
         assertEquals(PortfolioRoute.PORTFOLIO, coordinator.state.value.currentRoute)
         key = "valid-placeholder"
@@ -85,7 +88,7 @@ class AssetSearchViewModelTest {
     @Test
     fun networkFailureBlocksSearchWithoutCallingKeyInvalid() {
         val network = FakeNetwork()
-        val coordinator = PortfolioCoordinator(network, { "placeholder-key" })
+        val coordinator = portfolio(network, { "placeholder-key" })
         network.complete(NetworkResult(catalog, null))
         coordinator.openAssetSearch()
         network.complete(NetworkResult(null, "Network request failed"))
@@ -99,7 +102,7 @@ class AssetSearchViewModelTest {
     fun doesNotRequestCatalogBeforeOpeningAndRejectsEmptyOrMalformedKey() {
         val network = FakeNetwork()
         var key = ""
-        val model = AssetSearchViewModel({}, network, { key })
+        val model = model(network, { key })
         assertEquals(0, network.mapRequests)
         for (value in listOf("", "   ", "placeholder\nkey")) {
             key = value
@@ -115,9 +118,9 @@ class AssetSearchViewModelTest {
     @Test
     fun rejectsInvalidKeyButAllowsRetryAfterNetworkFailure() {
         val network = FakeNetwork()
-        val model = AssetSearchViewModel({}, network, { "placeholder-key" })
+        val model = model(network, { "placeholder-key" })
         model.openSearch()
-        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected"))
+        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected", NetworkFailure.INVALID_KEY))
         assertTrue(model.state.value.isApiKeyInvalid)
         model.openSearch()
         network.complete(NetworkResult(null, "Network request failed"))
@@ -129,7 +132,7 @@ class AssetSearchViewModelTest {
     fun revalidatesOnOpeningAndIgnoresResponseForChangedKey() {
         var key = "first-placeholder"
         val network = FakeNetwork { key }
-        val model = AssetSearchViewModel({}, network, { key })
+        val model = model(network, { key })
         model.openSearch()
         network.complete(NetworkResult(catalog, null))
         key = "second-placeholder"
@@ -137,7 +140,7 @@ class AssetSearchViewModelTest {
         assertTrue(model.state.value.assets.isEmpty())
         assertTrue(model.state.value.isLoading)
         key = "third-placeholder"
-        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected"))
+        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected", NetworkFailure.INVALID_KEY))
         assertFalse(model.state.value.isLoading)
         model.openSearch()
         network.complete(NetworkResult(catalog, null))
@@ -148,10 +151,10 @@ class AssetSearchViewModelTest {
     @Test
     fun ignoresSupersededRequestWhileNewValidationIsLoading() {
         val network = FakeNetwork()
-        val model = AssetSearchViewModel({}, network, { "placeholder-key" })
+        val model = model(network, { "placeholder-key" })
         model.openSearch()
         model.openSearch()
-        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected"))
+        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected", NetworkFailure.INVALID_KEY))
         assertTrue(model.state.value.isLoading)
         network.complete(NetworkResult(catalog, null))
         assertEquals(catalog, model.state.value.assets)
@@ -162,7 +165,7 @@ class AssetSearchViewModelTest {
         val profile = ProfileViewModel()
         profile.setCoinMarketCapApiKey("first-placeholder")
         val network = FakeNetwork(profile::getCoinMarketCapApiKey)
-        val portfolio = PortfolioCoordinator(network, profile::getCoinMarketCapApiKey)
+        val portfolio = portfolio(network, profile::getCoinMarketCapApiKey)
         network.complete(NetworkResult(catalog, null))
         val tabs = TabBarCoordinator(portfolioCoordinator = portfolio, profileViewModel = profile)
         portfolio.portfolioViewModel.onAssetSearch()
@@ -182,7 +185,7 @@ class AssetSearchViewModelTest {
     @Test
     fun navigationResetIgnoresPendingValidation() {
         val network = FakeNetwork()
-        val portfolio = PortfolioCoordinator(network, { "placeholder-key" })
+        val portfolio = portfolio(network, { "placeholder-key" })
         network.complete(NetworkResult(catalog, null))
         portfolio.openAssetSearch()
         portfolio.resetNavigation()
@@ -194,7 +197,7 @@ class AssetSearchViewModelTest {
     @Test
     fun loadsOnceAndSearchesLocallyByCaseInsensitivePrefix() {
         val network = FakeNetwork()
-        val model = AssetSearchViewModel({}, network)
+        val model = model(network)
         model.loadCatalog()
         assertTrue(model.state.value.isLoading)
         model.loadCatalog()
@@ -218,7 +221,7 @@ class AssetSearchViewModelTest {
     @Test
     fun appliesLatestQueryWhenCatalogArrivesAndCopiesCatalog() {
         val network = FakeNetwork()
-        val model = AssetSearchViewModel({}, network)
+        val model = model(network)
         model.loadCatalog()
         model.search("btc")
         model.search("eth")
@@ -233,7 +236,7 @@ class AssetSearchViewModelTest {
     @Test
     fun retriesFailureExplicitlyWithoutRequestsOnEachKeystroke() {
         val network = FakeNetwork()
-        val model = AssetSearchViewModel({}, network)
+        val model = model(network)
         model.loadCatalog()
         network.complete(NetworkResult(null, "HTTP 503: Request failed"))
         assertFalse(model.state.value.isLoading)
@@ -252,7 +255,7 @@ class AssetSearchViewModelTest {
     @Test
     fun treatsEmptyCatalogAsSuccessfulCachedResponse() {
         val network = FakeNetwork()
-        val model = AssetSearchViewModel({}, network)
+        val model = model(network)
         model.loadCatalog()
         network.complete(NetworkResult(emptyList(), null))
         model.loadCatalog()
@@ -269,7 +272,7 @@ class AssetSearchViewModelTest {
         }
         val profile = ProfileViewModel(null, storage)
         val network = FakeNetwork(profile::getCoinMarketCapApiKey)
-        val coordinator = PortfolioCoordinator(network, profile::getCoinMarketCapApiKey)
+        val coordinator = portfolio(network, profile::getCoinMarketCapApiKey)
         assertEquals(0, network.mapRequests)
         profile.setCoinMarketCapApiKey("placeholder-key")
         coordinator.portfolioViewModel.onAssetSearch()
@@ -284,7 +287,7 @@ class AssetSearchViewModelTest {
     @Test
     fun generatesAndCachesPublicLogoAddressWithoutMetadataRequests() {
         val network = FakeNetwork()
-        val model = AssetSearchViewModel({}, network)
+        val model = model(network)
         model.loadCatalog()
         model.loadLogo("1027")
         val state = model.state.value
@@ -300,7 +303,7 @@ class AssetSearchViewModelTest {
     @Test
     fun forwardsImageResultAndHandlesMissingNetworkManager() {
         val network = FakeNetwork()
-        val model = AssetSearchViewModel({}, network)
+        val model = model(network)
         model.loadCatalog()
         val expected = NetworkResult(byteArrayOf(0, -1, 127), null)
         network.imageResult = expected
@@ -315,7 +318,17 @@ class AssetSearchViewModelTest {
     }
 }
 
-private class FakeNetwork(private val keyProvider: () -> String = { "" }) : NetworkProtocol {
+private fun portfolio(network: FakeNetwork, key: () -> String): PortfolioCoordinator {
+    network.keyProvider = key
+    return PortfolioCoordinator(network)
+}
+
+private fun model(network: FakeNetwork, key: () -> String = { "placeholder-key" }): AssetSearchViewModel {
+    network.keyProvider = key
+    return AssetSearchViewModel({}, network, network::fetchImg)
+}
+
+private class FakeNetwork(var keyProvider: () -> String = { "placeholder-key" }) : NetworkProtocol {
     var mapRequests = 0
     val keys = mutableListOf<String>()
     private val mapCompletions = mutableListOf<(NetworkResult<List<Asset>>) -> Unit>()
@@ -323,9 +336,17 @@ private class FakeNetwork(private val keyProvider: () -> String = { "" }) : Netw
     var imageURL: String? = null
 
     override fun fetchMap(completion: (NetworkResult<List<Asset>>) -> Unit) {
+        val originalKey = keyProvider()
+        if (originalKey.trim().isEmpty() || originalKey.trim().any { it.isWhitespace() }) {
+            completion(NetworkResult(null, "API key is unavailable", NetworkFailure.INVALID_KEY))
+            return
+        }
         mapRequests++
         keys += keyProvider()
-        mapCompletions += completion
+        mapCompletions += { result ->
+            completion(if (originalKey == keyProvider()) result else
+                NetworkResult(null, "Response is outdated", NetworkFailure.STALE_RESPONSE))
+        }
     }
 
     fun complete(result: NetworkResult<List<Asset>>) {

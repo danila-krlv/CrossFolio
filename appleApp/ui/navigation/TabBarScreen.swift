@@ -23,13 +23,12 @@ struct TabBarScreen: View {
             preferencesStorage: AppleProfilePreferencesStorage(),
             secureStorage: AppleProfileSecureStorage()
         )
-        let networkManager = NetworkManager(apiKeyProvider: {
+        let networkManager = CoinMarketCapClient(transport: NetworkManager(), apiKeyProvider: {
             profileViewModel.getCoinMarketCapApiKey()
         })
         return TabBarCoordinator(
             portfolioCoordinator: PortfolioCoordinator(
-                networkManager: networkManager,
-                apiKeyProvider: { profileViewModel.getCoinMarketCapApiKey() }
+                networkManager: networkManager
             ),
             analyticsViewModel: AnalyticsViewModel(),
             profileViewModel: profileViewModel

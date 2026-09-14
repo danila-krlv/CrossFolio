@@ -1,6 +1,9 @@
 package com.crossfolio.common.portfolio.assetsearch
 
 import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.core.asset.AssetCatalog
+import com.crossfolio.common.core.network.NetworkFailure
+import com.crossfolio.common.core.network.NetworkResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,8 +23,8 @@ data class AssetSearchState(
 
 class AssetSearchViewModel(
     private val onBackRequested: () -> Unit,
-    private val networkManager: NetworkProtocol? = null,
-    private val apiKeyProvider: (() -> String)? = null,
+    private val assetCatalog: AssetCatalog? = null,
+    private val imageLoader: ((String, (NetworkResult<ByteArray>) -> Unit) -> Unit)? = null,
     private val onAssetSelected: (Asset) -> Unit = {},
 ) {
     private val _state = MutableStateFlow(AssetSearchState())
@@ -35,17 +38,7 @@ class AssetSearchViewModel(
     }
 
     fun openSearch(onValidated: (Boolean) -> Unit) {
-        val key = apiKeyProvider?.invoke()?.trim().orEmpty()
-        if (key.isEmpty() || key.any { it.isWhitespace() }) {
-            requestNumber++
-            catalog = emptyList()
-            catalogLoaded = false
-            _state.value = _state.value.copy(assets = emptyList(), isLoading = false,
-                error = "API key is missing or malformed", isApiKeyInvalid = true)
-            onValidated(false)
-            return
-        }
-        if (networkManager == null) {
+        if (assetCatalog == null) {
             _state.value = _state.value.copy(error = "Network manager is unavailable", isApiKeyInvalid = false)
             onValidated(false)
             return
@@ -58,7 +51,7 @@ class AssetSearchViewModel(
     }
 
     private fun requestCatalog(forceRefresh: Boolean, onValidated: (Boolean) -> Unit) {
-        val manager = networkManager ?: return
+        val source = assetCatalog ?: return
         if (!forceRefresh && (catalogLoaded || _state.value.isLoading)) return
         if (forceRefresh) {
             catalog = emptyList()
@@ -66,11 +59,10 @@ class AssetSearchViewModel(
             _state.value = _state.value.copy(assets = emptyList())
         }
         val currentRequest = ++requestNumber
-        val requestKey = apiKeyProvider?.invoke()
         _state.value = _state.value.copy(isLoading = true, error = null, isApiKeyInvalid = false)
-        manager.fetchMap { result ->
+        source.fetchMap { result ->
             if (currentRequest != requestNumber) return@fetchMap
-            if (requestKey != apiKeyProvider?.invoke()) {
+            if (result.failure == NetworkFailure.STALE_RESPONSE) {
                 _state.value = _state.value.copy(isLoading = false)
                 return@fetchMap
             }
@@ -82,13 +74,8 @@ class AssetSearchViewModel(
                 search(_state.value.searchText)
                 onValidated(true)
             } else {
-                _state.value = _state.value.copy(isLoading = false, error = result.error)
-                val invalidKey = result.error?.let { message ->
-                    message.startsWith("HTTP 401:") || listOf(1001, 1002, 1005, 1007).any {
-                        message.startsWith("CoinMarketCap error $it:")
-                    }
-                } == true
-                _state.value = _state.value.copy(isApiKeyInvalid = invalidKey)
+                _state.value = _state.value.copy(isLoading = false, error = result.error,
+                    isApiKeyInvalid = result.failure == NetworkFailure.INVALID_KEY)
                 onValidated(false)
             }
         }
@@ -112,11 +99,11 @@ class AssetSearchViewModel(
     }
 
     fun loadImage(url: String, completion: (NetworkResult<ByteArray>) -> Unit) {
-        val manager = networkManager
-        if (manager == null) {
+        val loader = imageLoader
+        if (loader == null) {
             completion(NetworkResult(null, "Network manager is unavailable"))
         } else {
-            manager.fetchImg(url, completion)
+            loader(url, completion)
         }
     }
 

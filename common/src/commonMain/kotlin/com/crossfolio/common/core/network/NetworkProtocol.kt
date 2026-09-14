@@ -1,10 +1,8 @@
-package com.crossfolio.common.portfolio.assetsearch
+package com.crossfolio.common.core.network
 
-import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.core.asset.AssetCatalog
 
-interface NetworkProtocol {
-    fun fetchMap(completion: (NetworkResult<List<Asset>>) -> Unit)
-
+interface NetworkProtocol : AssetCatalog {
     fun fetchLogoURL(id: String, completion: (NetworkResult<String>) -> Unit)
 
     fun fetchLogoUrlArray(
