@@ -1,6 +1,7 @@
 package com.crossfolio.common.navigation
 
 import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.core.network.ApiKeyManager
 import com.crossfolio.common.core.network.ApiKeyValidationStatus
 import com.crossfolio.common.core.network.ApiKeyValidator
 import com.crossfolio.common.core.network.NetworkFailure
@@ -8,6 +9,7 @@ import com.crossfolio.common.core.network.NetworkProtocol
 import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.PortfolioCoordinator
 import com.crossfolio.common.portfolio.PortfolioRoute
+import com.crossfolio.common.profile.ProfileSecureStorage
 import com.crossfolio.common.profile.ProfileViewModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -17,150 +19,285 @@ import kotlin.test.assertTrue
 
 class ApiKeyValidationTest {
     @Test
-    fun missingKeyShowsRootAlertAndNeverLoadsCatalog() {
-        val network = FakeNetwork()
-        val tabs = tabs(network, ProfileViewModel())
-        assertEquals(ApiKeyValidationStatus.MISSING, tabs.state.value.apiKeyValidation.status)
-        assertEquals("Добавьте действительный API-ключ CoinMarketCap в профиле.", tabs.state.value.alertMessage)
-        tabs.dismissAlert()
-        tabs.portfolioCoordinator.portfolioViewModel.onAssetSearch()
-        assertNull(tabs.state.value.alertMessage)
-        assertFalse(tabs.portfolioCoordinator.state.value.isSearchEnabled)
-        assertEquals(PortfolioRoute.PORTFOLIO, tabs.portfolioCoordinator.state.value.currentRoute)
-        assertEquals(0, network.validations.size)
-        assertEquals(0, network.catalogs.size)
+    fun oldCatalogFailureDoesNotCancelCandidateValidation() {
+        val f = Fixture()
+        f.valid(0)
+        val portfolio = f.tabs.portfolioCoordinator
+        portfolio.openAssetSearch()
+        f.profile.setCoinMarketCapApiKey("new-placeholder")
+        f.network.catalogs[0](NetworkResult(null, "Invalid old key", NetworkFailure.INVALID_KEY))
+        assertEquals(ApiKeyValidationStatus.CHECKING, f.manager.state.value.status)
+        assertNull(f.tabs.state.value.alertMessage)
+        f.valid(1)
+        assertEquals("new-placeholder", f.storage.coinMarketCapApiKey)
+        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertTrue(portfolio.state.value.isSearchEnabled)
     }
 
     @Test
-    fun validatesOnlyAtStartupAndOnSavedKeyChanges() {
-        val network = FakeNetwork()
-        val profile = profile()
-        val tabs = tabs(network, profile)
-        val portfolio = tabs.portfolioCoordinator
-        assertEquals(ApiKeyValidationStatus.CHECKING, tabs.state.value.apiKeyValidation.status)
-        assertFalse(portfolio.state.value.isSearchEnabled)
+    fun unchangedInputRetriesAfterStartupNetworkFailureOnce() {
+        val f = Fixture()
+        f.network.validations[0](NetworkResult(null, "Offline", NetworkFailure.TRANSPORT))
+        f.profile.beginApiKeyEditing()
+        f.profile.finishApiKeyEditing()
+        f.profile.finishApiKeyEditing()
+        assertEquals(listOf("saved-placeholder", "saved-placeholder"), f.network.keys)
+        f.valid(1)
+        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertTrue(f.tabs.portfolioCoordinator.state.value.isSearchEnabled)
+        assertEquals(0, f.storage.writes)
+    }
+
+    @Test
+    fun invalidCatalogKeyStillDisablesSearchWithoutActiveValidation() {
+        val f = Fixture()
+        f.valid(0)
+        val portfolio = f.tabs.portfolioCoordinator
         portfolio.openAssetSearch()
-        assertEquals(0, network.catalogs.size)
-        network.validations[0](NetworkResult(true, null))
-        assertTrue(portfolio.state.value.isSearchEnabled)
-        assertEquals(0, network.catalogs.size)
-        portfolio.openAssetSearch()
-        network.catalogs[0](NetworkResult(listOf(Asset("1", "BTC", name = "Bitcoin")), null))
-        portfolio.assetSearchViewModel.search("btc")
-        tabs.selectTab(AppTab.PROFILE)
-        tabs.selectTab(AppTab.PORTFOLIO)
-        portfolio.openAssetSearch()
-        assertEquals(1, network.validations.size)
-        assertEquals(1, network.catalogs.size)
-        assertEquals("btc", portfolio.assetSearchViewModel.state.value.searchText)
-        profile.setCoinMarketCapApiKey("first-placeholder")
-        profile.setUserName("Danila")
-        assertEquals(1, network.validations.size)
-        tabs.selectTab(AppTab.PROFILE)
-        profile.setCoinMarketCapApiKey("second-placeholder")
-        assertEquals(AppTab.PROFILE, tabs.state.value.selectedTab)
+        f.network.catalogs[0](NetworkResult(null, "Invalid key", NetworkFailure.INVALID_KEY))
+        assertEquals(ApiKeyValidationStatus.INVALID, f.manager.state.value.status)
         assertEquals(PortfolioRoute.PORTFOLIO, portfolio.state.value.currentRoute)
         assertFalse(portfolio.state.value.isSearchEnabled)
-        assertTrue(portfolio.assetSearchViewModel.state.value.assets.isEmpty())
-        assertEquals(2, network.validations.size)
-        network.validations[1](NetworkResult(true, null))
-        portfolio.openAssetSearch()
-        assertEquals(2, network.catalogs.size)
+        assertEquals(1, f.network.keys.size)
     }
 
     @Test
-    fun changingOrRemovingKeyIgnoresOldValidationAndCatalogResponses() {
-        val network = FakeNetwork()
-        val profile = profile()
-        val tabs = tabs(network, profile)
-        profile.setCoinMarketCapApiKey("second-placeholder")
-        network.validations[0](NetworkResult(true, null))
-        assertEquals(ApiKeyValidationStatus.CHECKING, tabs.state.value.apiKeyValidation.status)
-        network.validations[1](NetworkResult(true, null))
-        tabs.portfolioCoordinator.openAssetSearch()
-        profile.setCoinMarketCapApiKey("third-placeholder")
-        network.catalogs[0](NetworkResult(null, "Old error", NetworkFailure.INVALID_KEY))
-        assertEquals(ApiKeyValidationStatus.CHECKING, tabs.state.value.apiKeyValidation.status)
-        assertNull(tabs.state.value.alertMessage)
-        profile.setCoinMarketCapApiKey("")
-        network.validations[2](NetworkResult(true, null))
-        assertEquals(ApiKeyValidationStatus.MISSING, tabs.state.value.apiKeyValidation.status)
-        assertFalse(tabs.portfolioCoordinator.state.value.isSearchEnabled)
-        assertEquals(3, network.validations.size)
+    fun focusLossWithoutChangesRestartsInterruptedStartupValidation() {
+        val f = Fixture()
+        f.profile.beginApiKeyEditing()
+        f.profile.finishApiKeyEditing()
+        assertEquals(listOf("saved-placeholder", "saved-placeholder"), f.network.keys)
+        f.invalid(0)
+        assertNull(f.tabs.state.value.alertMessage)
+        assertEquals(ApiKeyValidationStatus.CHECKING, f.manager.state.value.status)
+        f.valid(1)
+        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertEquals(0, f.storage.writes)
     }
 
     @Test
-    fun invalidKeyAndNetworkFailureHaveDifferentRootAlerts() {
-        val network = FakeNetwork()
-        val profile = profile()
-        val tabs = tabs(network, profile)
-        network.validations[0](NetworkResult(null, "Invalid key", NetworkFailure.INVALID_KEY))
-        assertEquals(ApiKeyValidationStatus.INVALID, tabs.state.value.apiKeyValidation.status)
-        val invalidMessage = tabs.state.value.alertMessage
-        assertTrue(invalidMessage != null)
-        profile.setCoinMarketCapApiKey("second-placeholder")
-        assertNull(tabs.state.value.alertMessage)
-        network.validations[1](NetworkResult(null, "Network request failed", NetworkFailure.TRANSPORT))
-        assertEquals(ApiKeyValidationStatus.CHECK_FAILED, tabs.state.value.apiKeyValidation.status)
-        assertEquals("Не удалось проверить API-ключ. Проверьте подключение к интернету.", tabs.state.value.alertMessage)
-        assertFalse(tabs.portfolioCoordinator.state.value.isSearchEnabled)
-        tabs.dismissAlert()
-        tabs.selectTab(AppTab.PROFILE)
-        tabs.selectTab(AppTab.PORTFOLIO)
-        tabs.portfolioCoordinator.openAssetSearch()
-        assertEquals(2, network.validations.size)
-        assertNull(tabs.state.value.alertMessage)
+    fun debounceRestartsAndSavesOnlyAfterSuccessfulValidation() {
+        val f = Fixture()
+        f.valid(0)
+        f.profile.editCoinMarketCapApiKey("new-placeholder")
+        f.timer.advance(4_999)
+        assertEquals(1, f.network.keys.size)
+        assertEquals("saved-placeholder", f.storage.coinMarketCapApiKey)
+        f.profile.editCoinMarketCapApiKey("latest-placeholder")
+        f.timer.advance(4_999)
+        assertEquals(1, f.network.keys.size)
+        f.timer.advance(1)
+        assertEquals(listOf("saved-placeholder", "latest-placeholder"), f.network.keys)
+        assertEquals(0, f.storage.writes)
+        f.valid(1)
+        assertEquals("latest-placeholder", f.storage.coinMarketCapApiKey)
+        assertEquals(1, f.storage.writes)
+        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertTrue(f.profile.state.value.hasApiKey)
+        assertFalse(f.tabs.state.value.toString().contains("latest-placeholder"))
     }
 
     @Test
-    fun catalogNetworkFailureKeepsValidKeyButAuthFailureDisablesSearch() {
-        val network = FakeNetwork()
-        val tabs = tabs(network, profile())
-        network.validations[0](NetworkResult(true, null))
-        tabs.portfolioCoordinator.openAssetSearch()
-        network.catalogs[0](NetworkResult(null, "Network request failed", NetworkFailure.TRANSPORT))
-        assertEquals(ApiKeyValidationStatus.VALID, tabs.state.value.apiKeyValidation.status)
-        assertTrue(tabs.portfolioCoordinator.state.value.isSearchEnabled)
-        assertEquals("Не удалось загрузить каталог. Проверьте подключение к интернету.", tabs.state.value.alertMessage)
-        tabs.dismissAlert()
-        tabs.portfolioCoordinator.openAssetSearch()
-        network.catalogs[1](NetworkResult(null, "Invalid key", NetworkFailure.INVALID_KEY))
-        assertEquals(ApiKeyValidationStatus.INVALID, tabs.state.value.apiKeyValidation.status)
-        assertFalse(tabs.portfolioCoordinator.state.value.isSearchEnabled)
-        assertEquals(PortfolioRoute.PORTFOLIO, tabs.portfolioCoordinator.state.value.currentRoute)
-        assertEquals(1, network.validations.size)
+    fun submitAndFocusLossCommitOnceAndCancelPendingTimer() {
+        val f = Fixture()
+        f.valid(0)
+        f.profile.beginApiKeyEditing()
+        f.profile.editCoinMarketCapApiKey("new-placeholder")
+        // Enter, loss of focus and disappearance all call this same action.
+        f.profile.finishApiKeyEditing()
+        f.profile.finishApiKeyEditing()
+        f.timer.advance(5_000)
+        assertEquals(2, f.network.keys.size)
+        f.valid(1)
+        assertEquals(1, f.storage.writes)
     }
 
     @Test
-    fun validatorClassifiesOtherFailuresWithoutRetainingSecrets() {
-        var completion: ((NetworkResult<Boolean>) -> Unit)? = null
-        val validator = ApiKeyValidator { completion = it }
-        assertEquals(ApiKeyValidationStatus.UNCHECKED, validator.state.value.status)
-        for (failure in listOf(NetworkFailure.HTTP, NetworkFailure.API, NetworkFailure.INVALID_RESPONSE)) {
-            validator.check(true)
-            completion!!(NetworkResult(null, "private-placeholder", failure))
-            assertEquals(ApiKeyValidationStatus.CHECK_FAILED, validator.state.value.status)
-            assertEquals(failure, validator.state.value.failure)
-            assertFalse(validator.state.value.toString().contains("private-placeholder"))
+    fun editingSuppressesStartupAndSupersededValidationAlerts() {
+        val f = Fixture()
+        f.profile.beginApiKeyEditing()
+        f.invalid(0)
+        assertNull(f.tabs.state.value.alertMessage)
+        assertEquals("saved-placeholder", f.storage.coinMarketCapApiKey)
+        assertFalse(f.tabs.portfolioCoordinator.state.value.isSearchEnabled)
+        f.profile.editCoinMarketCapApiKey("first-placeholder")
+        f.profile.finishApiKeyEditing()
+        f.profile.editCoinMarketCapApiKey("second-placeholder")
+        f.invalid(1)
+        assertNull(f.tabs.state.value.alertMessage)
+        assertEquals(2, f.network.keys.size)
+        f.timer.advance(5_000)
+        f.valid(2)
+        assertEquals("second-placeholder", f.storage.coinMarketCapApiKey)
+    }
+
+    @Test
+    fun invalidCandidateRechecksAndKeepsValidSavedKeyWithoutWriting() {
+        val f = Fixture()
+        f.valid(0)
+        f.profile.setCoinMarketCapApiKey("bad-placeholder")
+        f.invalid(1)
+        assertEquals(listOf("saved-placeholder", "bad-placeholder", "saved-placeholder"), f.network.keys)
+        assertNull(f.tabs.state.value.alertMessage)
+        f.valid(2)
+        assertEquals("saved-placeholder", f.storage.coinMarketCapApiKey)
+        assertEquals(0, f.storage.writes)
+        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertEquals("Новый API-ключ недействителен. Сохранён прежний ключ.", f.tabs.state.value.alertMessage)
+    }
+
+    @Test
+    fun invalidSavedKeyIsDeletedAndNetworkFailureDoesNotRewriteIt() {
+        for (failure in listOf(NetworkFailure.INVALID_KEY, NetworkFailure.TRANSPORT)) {
+            val f = Fixture()
+            f.valid(0)
+            f.profile.setCoinMarketCapApiKey("bad-placeholder")
+            f.invalid(1)
+            f.network.validations[2](NetworkResult(null, "Safe error", failure))
+            if (failure == NetworkFailure.INVALID_KEY) {
+                assertEquals("", f.storage.coinMarketCapApiKey)
+                assertEquals(1, f.storage.writes)
+                assertEquals(ApiKeyValidationStatus.MISSING, f.manager.state.value.status)
+                assertFalse(f.profile.state.value.hasApiKey)
+            } else {
+                assertEquals("saved-placeholder", f.storage.coinMarketCapApiKey)
+                assertEquals(0, f.storage.writes)
+                assertEquals(ApiKeyValidationStatus.CHECK_FAILED, f.manager.state.value.status)
+            }
+            assertFalse(f.tabs.portfolioCoordinator.state.value.isSearchEnabled)
+            assertTrue(f.tabs.state.value.alertMessage != null)
         }
-        validator.check(true)
-        completion!!(NetworkResult(null, "Stale", NetworkFailure.STALE_RESPONSE))
-        assertEquals(ApiKeyValidationStatus.UNCHECKED, validator.state.value.status)
+    }
+
+    @Test
+    fun emptyInputDeletesAfterCommitAndDoesNotMakeNetworkRequest() {
+        val f = Fixture()
+        f.valid(0)
+        f.profile.editCoinMarketCapApiKey("")
+        assertEquals("saved-placeholder", f.storage.coinMarketCapApiKey)
+        f.timer.advance(5_000)
+        assertEquals("", f.storage.coinMarketCapApiKey)
+        assertEquals(1, f.network.keys.size)
+        assertEquals(ApiKeyValidationStatus.MISSING, f.manager.state.value.status)
+        assertFalse(f.profile.state.value.hasApiKey)
+    }
+
+    @Test
+    fun candidateNetworkErrorRetainsStorageAndFocusAloneDoesNotRecheckValidKey() {
+        val f = Fixture()
+        f.valid(0)
+        f.profile.beginApiKeyEditing()
+        f.profile.finishApiKeyEditing()
+        assertEquals(1, f.network.keys.size)
+        f.profile.setCoinMarketCapApiKey("new-placeholder")
+        f.network.validations[1](NetworkResult(null, "Network request failed", NetworkFailure.TRANSPORT))
+        assertEquals(0, f.storage.writes)
+        assertEquals(ApiKeyValidationStatus.CHECK_FAILED, f.manager.state.value.status)
+        assertEquals("Не удалось проверить API-ключ. Проверьте подключение к интернету.", f.tabs.state.value.alertMessage)
+        f.profile.beginApiKeyEditing()
+        assertNull(f.tabs.state.value.alertMessage)
+    }
+
+    @Test
+    fun rootGatesSearchAndKeyChangeResetsCatalogPreservingSelectedTab() {
+        val f = Fixture()
+        val portfolio = f.tabs.portfolioCoordinator
+        portfolio.openAssetSearch()
+        assertEquals(0, f.network.catalogs.size)
+        f.valid(0)
+        portfolio.openAssetSearch()
+        f.network.catalogs[0](NetworkResult(listOf(Asset("1", "BTC", name = "Bitcoin")), null))
+        portfolio.assetSearchViewModel.search("btc")
+        f.tabs.selectTab(AppTab.PROFILE)
+        f.tabs.selectTab(AppTab.PORTFOLIO)
+        portfolio.openAssetSearch()
+        assertEquals(1, f.network.keys.size)
+        assertEquals(1, f.network.catalogs.size)
+        f.tabs.selectTab(AppTab.PROFILE)
+        f.profile.setCoinMarketCapApiKey("new-placeholder")
+        assertEquals("saved-placeholder", f.storage.coinMarketCapApiKey)
+        f.valid(1)
+        assertEquals(AppTab.PROFILE, f.tabs.state.value.selectedTab)
+        assertEquals(PortfolioRoute.PORTFOLIO, portfolio.state.value.currentRoute)
+        assertTrue(portfolio.assetSearchViewModel.state.value.assets.isEmpty())
+        portfolio.openAssetSearch()
+        assertEquals(2, f.network.catalogs.size)
+    }
+
+    @Test
+    fun oldCatalogFailureCannotShowAlertDuringEditingOrAfterKeyChange() {
+        val f = Fixture()
+        f.valid(0)
+        f.tabs.portfolioCoordinator.openAssetSearch()
+        f.profile.editCoinMarketCapApiKey("new-placeholder")
+        f.network.catalogs[0](NetworkResult(null, "Old error", NetworkFailure.INVALID_KEY))
+        assertNull(f.tabs.state.value.alertMessage)
+        f.timer.advance(5_000)
+        f.valid(1)
+        f.network.catalogs[0](NetworkResult(null, "Old error", NetworkFailure.INVALID_KEY))
+        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertNull(f.tabs.state.value.alertMessage)
+    }
+
+    @Test
+    fun missingStartupAndStorageWriteFailureNeverEnableSearch() {
+        val f = Fixture("")
+        assertEquals(ApiKeyValidationStatus.MISSING, f.manager.state.value.status)
+        assertEquals(0, f.network.keys.size)
+        f.storage.rejectWrites = true
+        f.profile.setCoinMarketCapApiKey("new-placeholder")
+        f.valid(0)
+        assertEquals(ApiKeyValidationStatus.CHECK_FAILED, f.manager.state.value.status)
+        assertEquals(NetworkFailure.STORAGE, f.manager.state.value.failure)
+        assertFalse(f.tabs.portfolioCoordinator.state.value.isSearchEnabled)
+        assertFalse(f.profile.state.value.hasApiKey)
     }
 }
 
-private fun profile() = ProfileViewModel().apply { setCoinMarketCapApiKey("first-placeholder") }
+private class Fixture(initialKey: String = "saved-placeholder") {
+    val storage = FakeStorage(initialKey)
+    val network = FakeNetwork()
+    val timer = ManualTimer()
+    val manager = ApiKeyManager(storage, ApiKeyValidator(network))
+    val profile = ProfileViewModel(null, manager, timer::schedule)
+    val tabs = TabBarCoordinator(PortfolioCoordinator(network), profileViewModel = profile, apiKeyManager = manager)
+    fun valid(index: Int) { network.validations[index](NetworkResult(true, null)) }
+    fun invalid(index: Int) { network.validations[index](NetworkResult(null, "Invalid key", NetworkFailure.INVALID_KEY)) }
+}
 
-private fun tabs(network: FakeNetwork, profile: ProfileViewModel) = TabBarCoordinator(
-    portfolioCoordinator = PortfolioCoordinator(network),
-    profileViewModel = profile,
-    apiKeyValidator = ApiKeyValidator(network::validateApiKey),
-)
+private class FakeStorage(initial: String) : ProfileSecureStorage {
+    var writes = 0
+    var rejectWrites = false
+    override var coinMarketCapApiKey = initial
+        set(value) { writes++; if (!rejectWrites) field = value }
+}
+
+private class ManualTimer {
+    private var now = 0L
+    private data class Task(val due: Long, val action: () -> Unit, var cancelled: Boolean = false)
+    private val tasks = mutableListOf<Task>()
+    fun schedule(delay: Long, action: () -> Unit): () -> Unit {
+        val task = Task(now + delay, action)
+        tasks += task
+        return { task.cancelled = true }
+    }
+    fun advance(milliseconds: Long) {
+        now += milliseconds
+        val due = tasks.filter { !it.cancelled && it.due <= now }
+        tasks.removeAll(due)
+        due.forEach { it.action() }
+    }
+}
 
 private class FakeNetwork : NetworkProtocol {
+    val keys = mutableListOf<String>()
     val validations = mutableListOf<(NetworkResult<Boolean>) -> Unit>()
     val catalogs = mutableListOf<(NetworkResult<List<Asset>>) -> Unit>()
-    override fun validateApiKey(completion: (NetworkResult<Boolean>) -> Unit) { validations += completion }
+    override fun validateApiKey(apiKey: String, completion: (NetworkResult<Boolean>) -> Unit) {
+        keys += apiKey
+        validations += completion
+    }
+    override fun validateApiKey(completion: (NetworkResult<Boolean>) -> Unit) = error("Use explicit key")
     override fun fetchMap(completion: (NetworkResult<List<Asset>>) -> Unit) { catalogs += completion }
     override fun fetchLogoURL(id: String, completion: (NetworkResult<String>) -> Unit) = error("Unexpected request")
     override fun fetchLogoUrlArray(idString: String, idArray: List<String>,

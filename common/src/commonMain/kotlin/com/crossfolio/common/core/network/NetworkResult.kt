@@ -7,6 +7,7 @@ enum class NetworkFailure {
     TRANSPORT,
     INVALID_RESPONSE,
     STALE_RESPONSE,
+    STORAGE,
 }
 
 class NetworkResult<T : Any>(

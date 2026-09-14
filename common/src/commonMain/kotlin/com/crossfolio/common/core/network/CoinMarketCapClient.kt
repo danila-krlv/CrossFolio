@@ -22,6 +22,13 @@ class CoinMarketCapClient(
         }, completion)
     }
 
+    override fun validateApiKey(apiKey: String, completion: (NetworkResult<Boolean>) -> Unit) {
+        request("v1/key/info", { payload ->
+            payload.getValue("data").jsonObject
+            true
+        }, completion, apiKey)
+    }
+
     // Invoke from the main thread, matching ViewModel actions and transport callbacks.
     override fun fetchMap(completion: (NetworkResult<List<Asset>>) -> Unit) {
         request("v1/cryptocurrency/map?start=1&limit=1000", { payload ->
@@ -75,8 +82,8 @@ class CoinMarketCapClient(
     }
 
     private fun <T : Any> request(path: String, decode: (JsonObject) -> T,
-        completion: (NetworkResult<T>) -> Unit) {
-        val originalKey = runCatching { apiKeyProvider() }.getOrNull()
+        completion: (NetworkResult<T>) -> Unit, candidateKey: String? = null) {
+        val originalKey = candidateKey ?: runCatching { apiKeyProvider() }.getOrNull()
         val key = originalKey?.trim().orEmpty()
         if (key.isEmpty() || key.any { it.isWhitespace() }) {
             completion(NetworkResult(null, "API key is unavailable", NetworkFailure.INVALID_KEY))
@@ -84,7 +91,7 @@ class CoinMarketCapClient(
         }
         transport.execute(HttpRequest("https://pro-api.coinmarketcap.com/$path",
             mapOf("Accept" to "application/json", "X-CMC_PRO_API_KEY" to key), false)) { result ->
-            if (originalKey != runCatching { apiKeyProvider() }.getOrNull()) {
+            if (candidateKey == null && originalKey != runCatching { apiKeyProvider() }.getOrNull()) {
                 completion(NetworkResult(null, "Response is outdated", NetworkFailure.STALE_RESPONSE))
                 return@execute
             }

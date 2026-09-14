@@ -1,8 +1,14 @@
 package com.crossfolio.common.profile
 
+import com.crossfolio.common.core.network.ApiKeyManager
+import com.crossfolio.common.core.network.ApiKeyValidationStatus
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class ProfileState(
     val userName: String = "",
@@ -10,15 +16,28 @@ data class ProfileState(
     val hasApiKey: Boolean = false,
 )
 
-class ProfileViewModel(
+class ProfileViewModel internal constructor(
     private val preferencesStorage: ProfilePreferencesStorage?,
-    private val secureStorage: ProfileSecureStorage?,
+    val apiKeyManager: ApiKeyManager,
+    private val schedule: (Long, () -> Unit) -> (() -> Unit),
 ) {
-    constructor() : this(null, null)
+    constructor(preferencesStorage: ProfilePreferencesStorage?, apiKeyManager: ApiKeyManager) : this(
+        preferencesStorage, apiKeyManager, { milliseconds, action ->
+            val job = CoroutineScope(Dispatchers.Main.immediate).launch {
+                delay(milliseconds)
+                action()
+            }
+            val cancel: () -> Unit = { job.cancel() }
+            cancel
+        },
+    )
+
+    constructor() : this(null, ApiKeyManager())
 
     internal var onApiKeyChanged: () -> Unit = {}
-
-    private var inMemoryApiKey = ""
+    private var apiKeyDraft: String? = null
+    private var apiKeyDirty = false
+    private var cancelPending: (() -> Unit)? = null
 
     private val _state = MutableStateFlow(
         ProfileState(
@@ -28,6 +47,13 @@ class ProfileViewModel(
         ),
     )
     val state: StateFlow<ProfileState> = _state.asStateFlow()
+
+    init {
+        apiKeyManager.onSavedKeyChanged = {
+            _state.value = _state.value.copy(hasApiKey = getCoinMarketCapApiKey().isNotEmpty())
+            onApiKeyChanged()
+        }
+    }
 
     fun setUserName(userName: String) {
         preferencesStorage?.userName = userName
@@ -40,16 +66,44 @@ class ProfileViewModel(
     }
 
     fun setCoinMarketCapApiKey(apiKey: String) {
-        val previousKey = getCoinMarketCapApiKey()
-        if (secureStorage != null) {
-            secureStorage.coinMarketCapApiKey = apiKey
-        } else {
-            inMemoryApiKey = apiKey
-        }
-        val savedKey = getCoinMarketCapApiKey()
-        _state.value = _state.value.copy(hasApiKey = savedKey.isNotEmpty())
-        if (savedKey != previousKey) onApiKeyChanged()
+        editCoinMarketCapApiKey(apiKey)
+        finishApiKeyEditing()
     }
 
-    fun getCoinMarketCapApiKey(): String = secureStorage?.coinMarketCapApiKey ?: inMemoryApiKey
+    fun beginApiKeyEditing() {
+        if (apiKeyManager.state.value.isEditing) return
+        cancelTimer()
+        apiKeyDraft = getCoinMarketCapApiKey()
+        apiKeyDirty = false
+        apiKeyManager.suspendValidation()
+    }
+
+    fun editCoinMarketCapApiKey(apiKey: String) {
+        cancelTimer()
+        apiKeyDraft = apiKey
+        apiKeyDirty = true
+        apiKeyManager.suspendValidation()
+        cancelPending = schedule(5_000) { finishApiKeyEditing() }
+    }
+
+    fun finishApiKeyEditing() {
+        val candidate = apiKeyDraft ?: return
+        apiKeyDraft = null
+        cancelTimer()
+        val status = apiKeyManager.state.value.status
+        if (!apiKeyDirty && status != ApiKeyValidationStatus.CHECKING &&
+            status != ApiKeyValidationStatus.CHECK_FAILED) {
+            apiKeyManager.endEditing()
+            return
+        }
+        apiKeyDirty = false
+        apiKeyManager.applyCandidate(candidate)
+    }
+
+    private fun cancelTimer() {
+        cancelPending?.invoke()
+        cancelPending = null
+    }
+
+    fun getCoinMarketCapApiKey(): String = apiKeyManager.getSavedKey()
 }

@@ -14,6 +14,18 @@ import kotlin.test.assertTrue
 
 class CoinMarketCapClientTest {
     @Test
+    fun validatesDraftWithoutReadingOrSavingCurrentKey() {
+        val transport = FakeTransport()
+        val client = CoinMarketCapClient(transport) { error("Must not read stored key") }
+        var result: NetworkResult<Boolean>? = null
+        client.validateApiKey(" draft-placeholder ") { result = it }
+        assertEquals("draft-placeholder", transport.requests.single().headers["X-CMC_PRO_API_KEY"])
+        transport.complete(200, """{"status":{"error_code":0},"data":{}}""")
+        assertEquals(true, result?.value)
+        assertNull(result?.failure)
+    }
+
+    @Test
     fun validatesCurrentApiKeyThroughKeyInfo() {
         val transport = FakeTransport()
         var key = "old-placeholder"

@@ -1,11 +1,10 @@
 package com.crossfolio.common.navigation
 
 import com.crossfolio.common.analytics.AnalyticsViewModel
+import com.crossfolio.common.core.network.ApiKeyManager
 import com.crossfolio.common.core.network.ApiKeyValidationState
 import com.crossfolio.common.core.network.ApiKeyValidationStatus
-import com.crossfolio.common.core.network.ApiKeyValidator
 import com.crossfolio.common.core.network.NetworkFailure
-import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.PortfolioCoordinator
 import com.crossfolio.common.profile.ProfileViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -31,21 +30,16 @@ class TabBarCoordinator(
     val portfolioCoordinator: PortfolioCoordinator = PortfolioCoordinator(),
     val analyticsViewModel: AnalyticsViewModel = AnalyticsViewModel(),
     val profileViewModel: ProfileViewModel = ProfileViewModel(),
-    val apiKeyValidator: ApiKeyValidator = ApiKeyValidator { completion ->
-        completion(NetworkResult(null, "Network manager is unavailable", NetworkFailure.TRANSPORT))
-    },
+    val apiKeyManager: ApiKeyManager = profileViewModel.apiKeyManager,
 ) {
     private val _state = MutableStateFlow(TabBarState())
     val state: StateFlow<TabBarState> = _state.asStateFlow()
 
     init {
-        apiKeyValidator.onStateChanged = ::onValidationChanged
+        apiKeyManager.onStateChanged = ::onValidationChanged
         portfolioCoordinator.onNetworkFailure = ::onNetworkFailure
-        profileViewModel.onApiKeyChanged = {
-            resetNavigation()
-            apiKeyValidator.check(profileViewModel.state.value.hasApiKey)
-        }
-        apiKeyValidator.check(profileViewModel.state.value.hasApiKey)
+        profileViewModel.onApiKeyChanged = ::resetNavigation
+        apiKeyManager.start()
     }
 
     fun resetNavigation() {
@@ -69,19 +63,27 @@ class TabBarCoordinator(
     }
 
     private fun onValidationChanged(validation: ApiKeyValidationState) {
-        portfolioCoordinator.setSearchEnabled(validation.status == ApiKeyValidationStatus.VALID)
-        val message = when (validation.status) {
-            ApiKeyValidationStatus.MISSING, ApiKeyValidationStatus.INVALID ->
-                "Добавьте действительный API-ключ CoinMarketCap в профиле."
-            ApiKeyValidationStatus.CHECK_FAILED -> failureMessage(validation.failure, checkingKey = true)
-            else -> null
+        portfolioCoordinator.setSearchEnabled(validation.status == ApiKeyValidationStatus.VALID && !validation.isEditing)
+        val message = when {
+            validation.isEditing -> null
+            validation.status == ApiKeyValidationStatus.VALID && validation.inputFailure == NetworkFailure.INVALID_KEY ->
+                "Новый API-ключ недействителен. Сохранён прежний ключ."
+            else -> when (validation.status) {
+                ApiKeyValidationStatus.MISSING, ApiKeyValidationStatus.INVALID ->
+                    "Добавьте действительный API-ключ CoinMarketCap в профиле."
+                ApiKeyValidationStatus.CHECK_FAILED -> failureMessage(validation.failure, checkingKey = true)
+                else -> null
+            }
         }
         _state.value = _state.value.copy(apiKeyValidation = validation, alertMessage = message)
     }
 
     private fun onNetworkFailure(failure: NetworkFailure?) {
+        if (apiKeyManager.state.value.isEditing) return
         if (failure == NetworkFailure.INVALID_KEY) {
-            apiKeyValidator.rejectKey()
+            // A catalog response for the saved key must not supersede an active key validation.
+            if (apiKeyManager.state.value.status == ApiKeyValidationStatus.CHECKING) return
+            apiKeyManager.rejectKey()
             portfolioCoordinator.resetNavigation()
         } else {
             _state.value = _state.value.copy(alertMessage = failureMessage(failure, checkingKey = false))
@@ -92,6 +94,7 @@ class TabBarCoordinator(
         NetworkFailure.TRANSPORT -> if (checkingKey)
             "Не удалось проверить API-ключ. Проверьте подключение к интернету."
             else "Не удалось загрузить каталог. Проверьте подключение к интернету."
+        NetworkFailure.STORAGE -> "Не удалось сохранить API-ключ. Попробуйте снова."
         NetworkFailure.INVALID_RESPONSE -> "Получен некорректный ответ CoinMarketCap. Попробуйте позже."
         else -> "Сервис CoinMarketCap временно недоступен. Попробуйте позже."
     }

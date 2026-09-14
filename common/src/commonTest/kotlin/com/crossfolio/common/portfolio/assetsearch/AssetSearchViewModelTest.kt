@@ -152,6 +152,9 @@ private fun model(network: FakeNetwork): AssetSearchViewModel =
     AssetSearchViewModel({}, network, network::fetchImg)
 
 private class FakeNetwork : NetworkProtocol {
+    override fun validateApiKey(apiKey: String, completion: (NetworkResult<Boolean>) -> Unit) =
+        error("Unexpected key validation request")
+
     override fun validateApiKey(completion: (NetworkResult<Boolean>) -> Unit) =
         error("Unexpected key validation request")
 
