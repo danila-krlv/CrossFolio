@@ -3,11 +3,14 @@ import SwiftUI
 
 struct PortfolioScreen: View {
     private let coordinator: PortfolioCoordinator
+    @State private var isSearchEnabled: Bool
     @State private var currentRoute: PortfolioRoute
     @State private var stopObserving: (() -> Void)?
 
     init(coordinator: PortfolioCoordinator) {
         self.coordinator = coordinator
+        _isSearchEnabled = State(initialValue:
+            (coordinator.state.value as? PortfolioNavigationState)?.isSearchEnabled ?? false)
         _currentRoute = State(
             initialValue: (coordinator.state.value as? PortfolioNavigationState)?.currentRoute
                 ?? .portfolio
@@ -26,7 +29,10 @@ struct PortfolioScreen: View {
         }
         .onAppear {
             stopObserving?()
-            stopObserving = coordinator.observeState { currentRoute = $0.currentRoute }
+            stopObserving = coordinator.observeState {
+                currentRoute = $0.currentRoute
+                isSearchEnabled = $0.isSearchEnabled
+            }
         }
         .onDisappear {
             stopObserving?()
@@ -47,6 +53,7 @@ struct PortfolioScreen: View {
                     .font(.title2)
                     .frame(width: 56, height: 56)
             }
+            .disabled(!isSearchEnabled)
             .buttonStyle(.borderedProminent)
             .clipShape(Circle())
             .accessibilityLabel("Добавить актив")

@@ -1,8 +1,9 @@
 package com.crossfolio.common.portfolio
 
 import com.crossfolio.common.core.asset.Asset
-import com.crossfolio.common.portfolio.assetsearch.AssetSearchViewModel
+import com.crossfolio.common.core.network.NetworkFailure
 import com.crossfolio.common.core.network.NetworkProtocol
+import com.crossfolio.common.portfolio.assetsearch.AssetSearchViewModel
 import com.crossfolio.common.portfolio.edit.EditViewModel
 import com.crossfolio.common.portfolio.overview.PortfolioViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -20,7 +21,7 @@ enum class PortfolioRoute {
 
 data class PortfolioNavigationState(
     val backStack: List<PortfolioRoute> = listOf(PortfolioRoute.PORTFOLIO),
-    val alertMessage: String? = null,
+    val isSearchEnabled: Boolean = false,
 ) {
     init {
         require(backStack.isNotEmpty()) { "Portfolio navigation stack must not be empty" }
@@ -45,52 +46,26 @@ class PortfolioCoordinator(
         assetCatalog = networkManager,
         imageLoader = networkManager?.let { it::fetchImg },
         onAssetSelected = ::openEdit,
+        onCatalogFailed = { onNetworkFailure(it) },
     )
 
-    private var navigationVersion = 0
+    internal var onNetworkFailure: (NetworkFailure?) -> Unit = {}
 
-    init {
-        val version = navigationVersion
-        assetSearchViewModel.openSearch { valid ->
-            if (version != navigationVersion) return@openSearch
-            if (!valid) showValidationAlert()
-        }
+    internal fun setSearchEnabled(enabled: Boolean) {
+        _state.value = _state.value.copy(isSearchEnabled = enabled)
     }
 
     fun resetNavigation() {
-        navigationVersion++
         editViewModel = null
-        _state.value = PortfolioNavigationState()
+        assetSearchViewModel.resetCatalog()
+        _state.value = PortfolioNavigationState(isSearchEnabled = _state.value.isSearchEnabled)
     }
 
     fun openAssetSearch() {
-        val version = ++navigationVersion
+        if (!_state.value.isSearchEnabled) return
         editViewModel = null
-        _state.value = _state.value.copy(backStack = listOf(PortfolioRoute.PORTFOLIO), alertMessage = null)
-        assetSearchViewModel.openSearch { valid ->
-            if (version != navigationVersion) return@openSearch
-            if (valid) {
-                _state.value = _state.value.copy(
-                    backStack = listOf(PortfolioRoute.PORTFOLIO, PortfolioRoute.ASSET_SEARCH),
-                    alertMessage = null,
-                )
-            } else {
-                showValidationAlert()
-            }
-        }
-    }
-
-    fun dismissAlert() {
-        _state.value = _state.value.copy(alertMessage = null)
-    }
-
-    private fun showValidationAlert() {
-        val message = if (assetSearchViewModel.state.value.isApiKeyInvalid) {
-            "Добавьте действительный API-ключ CoinMarketCap в профиле."
-        } else {
-            "Не удалось проверить API-ключ. Проверьте подключение к интернету и повторите попытку."
-        }
-        _state.value = _state.value.copy(alertMessage = message)
+        _state.value = _state.value.copy(backStack = listOf(PortfolioRoute.PORTFOLIO, PortfolioRoute.ASSET_SEARCH))
+        assetSearchViewModel.loadCatalog()
     }
 
     fun observeState(observer: (PortfolioNavigationState) -> Unit): () -> Unit {
@@ -101,7 +76,7 @@ class PortfolioCoordinator(
     }
 
     private fun openEdit(asset: Asset) {
-        if (_state.value.currentRoute != PortfolioRoute.ASSET_SEARCH) return
+        if (!_state.value.isSearchEnabled || _state.value.currentRoute != PortfolioRoute.ASSET_SEARCH) return
         editViewModel = EditViewModel(asset, ::navigateBack)
         _state.value = _state.value.copy(backStack = _state.value.backStack + PortfolioRoute.EDIT)
     }
@@ -110,7 +85,7 @@ class PortfolioCoordinator(
         val backStack = _state.value.backStack
         if (backStack.size > 1) {
             editViewModel = null
-            _state.value = PortfolioNavigationState(backStack = backStack.dropLast(1))
+            _state.value = _state.value.copy(backStack = backStack.dropLast(1))
         }
     }
 }

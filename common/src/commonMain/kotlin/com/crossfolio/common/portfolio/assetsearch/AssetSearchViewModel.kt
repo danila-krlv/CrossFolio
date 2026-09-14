@@ -18,7 +18,6 @@ data class AssetSearchState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val logoUrls: Map<String, String> = emptyMap(),
-    val isApiKeyInvalid: Boolean = false,
 )
 
 class AssetSearchViewModel(
@@ -26,6 +25,7 @@ class AssetSearchViewModel(
     private val assetCatalog: AssetCatalog? = null,
     private val imageLoader: ((String, (NetworkResult<ByteArray>) -> Unit) -> Unit)? = null,
     private val onAssetSelected: (Asset) -> Unit = {},
+    private val onCatalogFailed: (NetworkFailure?) -> Unit = {},
 ) {
     private val _state = MutableStateFlow(AssetSearchState())
     val state: StateFlow<AssetSearchState> = _state.asStateFlow()
@@ -33,24 +33,11 @@ class AssetSearchViewModel(
     private var catalogLoaded = false
     private var requestNumber = 0
 
-    fun openSearch() {
-        openSearch {}
-    }
-
-    fun openSearch(onValidated: (Boolean) -> Unit) {
-        if (assetCatalog == null) {
-            _state.value = _state.value.copy(error = "Network manager is unavailable", isApiKeyInvalid = false)
-            onValidated(false)
-            return
-        }
-        requestCatalog(forceRefresh = true, onValidated)
-    }
-
     fun loadCatalog(forceRefresh: Boolean = false) {
-        requestCatalog(forceRefresh) {}
+        requestCatalog(forceRefresh)
     }
 
-    private fun requestCatalog(forceRefresh: Boolean, onValidated: (Boolean) -> Unit) {
+    private fun requestCatalog(forceRefresh: Boolean) {
         val source = assetCatalog ?: return
         if (!forceRefresh && (catalogLoaded || _state.value.isLoading)) return
         if (forceRefresh) {
@@ -59,7 +46,7 @@ class AssetSearchViewModel(
             _state.value = _state.value.copy(assets = emptyList())
         }
         val currentRequest = ++requestNumber
-        _state.value = _state.value.copy(isLoading = true, error = null, isApiKeyInvalid = false)
+        _state.value = _state.value.copy(isLoading = true, error = null)
         source.fetchMap { result ->
             if (currentRequest != requestNumber) return@fetchMap
             if (result.failure == NetworkFailure.STALE_RESPONSE) {
@@ -72,13 +59,18 @@ class AssetSearchViewModel(
                 catalogLoaded = true
                 _state.value = _state.value.copy(isLoading = false, error = null)
                 search(_state.value.searchText)
-                onValidated(true)
             } else {
-                _state.value = _state.value.copy(isLoading = false, error = result.error,
-                    isApiKeyInvalid = result.failure == NetworkFailure.INVALID_KEY)
-                onValidated(false)
+                _state.value = _state.value.copy(isLoading = false, error = result.error)
+                onCatalogFailed(result.failure)
             }
         }
+    }
+
+    internal fun resetCatalog() {
+        requestNumber++
+        catalog = emptyList()
+        catalogLoaded = false
+        _state.value = AssetSearchState()
     }
 
     fun search(searchText: String): List<Asset> {

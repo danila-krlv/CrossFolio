@@ -1,15 +1,19 @@
 package com.crossfolio.common.navigation
 
 import com.crossfolio.common.analytics.AnalyticsViewModel
+import com.crossfolio.common.core.network.ApiKeyValidationState
+import com.crossfolio.common.core.network.ApiKeyValidationStatus
+import com.crossfolio.common.core.network.ApiKeyValidator
+import com.crossfolio.common.core.network.NetworkFailure
+import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.PortfolioCoordinator
-import com.crossfolio.common.portfolio.PortfolioRoute
 import com.crossfolio.common.profile.ProfileViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 enum class AppTab {
     PORTFOLIO,
@@ -19,23 +23,34 @@ enum class AppTab {
 
 data class TabBarState(
     val selectedTab: AppTab = AppTab.PORTFOLIO,
+    val apiKeyValidation: ApiKeyValidationState = ApiKeyValidationState(),
+    val alertMessage: String? = null,
 )
 
 class TabBarCoordinator(
     val portfolioCoordinator: PortfolioCoordinator = PortfolioCoordinator(),
     val analyticsViewModel: AnalyticsViewModel = AnalyticsViewModel(),
     val profileViewModel: ProfileViewModel = ProfileViewModel(),
+    val apiKeyValidator: ApiKeyValidator = ApiKeyValidator { completion ->
+        completion(NetworkResult(null, "Network manager is unavailable", NetworkFailure.TRANSPORT))
+    },
 ) {
     private val _state = MutableStateFlow(TabBarState())
     val state: StateFlow<TabBarState> = _state.asStateFlow()
 
     init {
-        profileViewModel.onApiKeyChanged = ::resetNavigation
+        apiKeyValidator.onStateChanged = ::onValidationChanged
+        portfolioCoordinator.onNetworkFailure = ::onNetworkFailure
+        profileViewModel.onApiKeyChanged = {
+            resetNavigation()
+            apiKeyValidator.check(profileViewModel.state.value.hasApiKey)
+        }
+        apiKeyValidator.check(profileViewModel.state.value.hasApiKey)
     }
 
     fun resetNavigation() {
         portfolioCoordinator.resetNavigation()
-        _state.value = TabBarState()
+        _state.value = _state.value.copy(alertMessage = null)
     }
 
     fun observeState(observer: (TabBarState) -> Unit): () -> Unit {
@@ -46,12 +61,39 @@ class TabBarCoordinator(
     }
 
     fun selectTab(tab: AppTab) {
-        if (tab == AppTab.PORTFOLIO && _state.value.selectedTab != AppTab.PORTFOLIO &&
-            portfolioCoordinator.state.value.currentRoute == PortfolioRoute.ASSET_SEARCH
-        ) {
-            portfolioCoordinator.openAssetSearch()
+        _state.value = _state.value.copy(selectedTab = tab)
+    }
+
+    fun dismissAlert() {
+        _state.value = _state.value.copy(alertMessage = null)
+    }
+
+    private fun onValidationChanged(validation: ApiKeyValidationState) {
+        portfolioCoordinator.setSearchEnabled(validation.status == ApiKeyValidationStatus.VALID)
+        val message = when (validation.status) {
+            ApiKeyValidationStatus.MISSING, ApiKeyValidationStatus.INVALID ->
+                "Добавьте действительный API-ключ CoinMarketCap в профиле."
+            ApiKeyValidationStatus.CHECK_FAILED -> failureMessage(validation.failure, checkingKey = true)
+            else -> null
         }
-        _state.value = TabBarState(selectedTab = tab)
+        _state.value = _state.value.copy(apiKeyValidation = validation, alertMessage = message)
+    }
+
+    private fun onNetworkFailure(failure: NetworkFailure?) {
+        if (failure == NetworkFailure.INVALID_KEY) {
+            apiKeyValidator.rejectKey()
+            portfolioCoordinator.resetNavigation()
+        } else {
+            _state.value = _state.value.copy(alertMessage = failureMessage(failure, checkingKey = false))
+        }
+    }
+
+    private fun failureMessage(failure: NetworkFailure?, checkingKey: Boolean): String = when (failure) {
+        NetworkFailure.TRANSPORT -> if (checkingKey)
+            "Не удалось проверить API-ключ. Проверьте подключение к интернету."
+            else "Не удалось загрузить каталог. Проверьте подключение к интернету."
+        NetworkFailure.INVALID_RESPONSE -> "Получен некорректный ответ CoinMarketCap. Попробуйте позже."
+        else -> "Сервис CoinMarketCap временно недоступен. Попробуйте позже."
     }
 
     // TODO: Add nested feature navigation when detail and edit flows are implemented.

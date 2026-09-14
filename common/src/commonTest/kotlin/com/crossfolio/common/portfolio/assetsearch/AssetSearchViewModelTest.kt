@@ -1,15 +1,10 @@
 package com.crossfolio.common.portfolio.assetsearch
 
 import com.crossfolio.common.core.asset.Asset
-import com.crossfolio.common.core.network.NetworkFailure
 import com.crossfolio.common.core.network.NetworkProtocol
 import com.crossfolio.common.core.network.NetworkResult
-import com.crossfolio.common.navigation.AppTab
-import com.crossfolio.common.navigation.TabBarCoordinator
 import com.crossfolio.common.portfolio.PortfolioCoordinator
 import com.crossfolio.common.portfolio.PortfolioRoute
-import com.crossfolio.common.profile.ProfileSecureStorage
-import com.crossfolio.common.profile.ProfileViewModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -26,8 +21,8 @@ class AssetSearchViewModelTest {
     @Test
     fun selectingAssetOpensEditAndBackPreservesSearch() {
         val network = FakeNetwork()
-        val coordinator = portfolio(network, { "placeholder-key" })
-        network.complete(NetworkResult(catalog, null))
+        val coordinator = PortfolioCoordinator(network)
+        coordinator.setSearchEnabled(true)
         coordinator.openAssetSearch()
         network.complete(NetworkResult(catalog, null))
         val search = coordinator.assetSearchViewModel
@@ -42,156 +37,10 @@ class AssetSearchViewModelTest {
         edit.onBack()
 
         assertEquals(PortfolioRoute.ASSET_SEARCH, coordinator.state.value.currentRoute)
+        assertTrue(coordinator.state.value.isSearchEnabled)
         assertEquals(searchState, search.state.value)
         assertEquals(requestCount, network.mapRequests)
         assertNull(coordinator.editViewModel)
-    }
-
-    @Test
-    fun missingKeyShowsSameAlertAtStartupAndOnSearchAttempt() {
-        val network = FakeNetwork()
-        val coordinator = portfolio(network, { "" })
-        val message = coordinator.state.value.alertMessage
-        assertEquals("Добавьте действительный API-ключ CoinMarketCap в профиле.", message)
-        assertEquals(0, network.mapRequests)
-        coordinator.dismissAlert()
-        assertNull(coordinator.state.value.alertMessage)
-        coordinator.portfolioViewModel.onAssetSearch()
-        assertEquals(message, coordinator.state.value.alertMessage)
-        assertEquals(PortfolioRoute.PORTFOLIO, coordinator.state.value.currentRoute)
-        assertEquals(0, network.mapRequests)
-    }
-
-    @Test
-    fun invalidKeyNeverOpensSearchAndCorrectedKeyOpensOnlyAfterValidation() {
-        var key = "invalid-placeholder"
-        val network = FakeNetwork { key }
-        val coordinator = portfolio(network, { key })
-        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected", NetworkFailure.INVALID_KEY))
-        val message = coordinator.state.value.alertMessage
-        assertTrue(message != null)
-        coordinator.dismissAlert()
-        coordinator.portfolioViewModel.onAssetSearch()
-        assertEquals(PortfolioRoute.PORTFOLIO, coordinator.state.value.currentRoute)
-        assertNull(coordinator.state.value.alertMessage)
-        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected", NetworkFailure.INVALID_KEY))
-        assertEquals(message, coordinator.state.value.alertMessage)
-        assertEquals(PortfolioRoute.PORTFOLIO, coordinator.state.value.currentRoute)
-        key = "valid-placeholder"
-        coordinator.portfolioViewModel.onAssetSearch()
-        assertEquals(PortfolioRoute.PORTFOLIO, coordinator.state.value.currentRoute)
-        network.complete(NetworkResult(catalog, null))
-        assertEquals(PortfolioRoute.ASSET_SEARCH, coordinator.state.value.currentRoute)
-        assertNull(coordinator.state.value.alertMessage)
-    }
-
-    @Test
-    fun networkFailureBlocksSearchWithoutCallingKeyInvalid() {
-        val network = FakeNetwork()
-        val coordinator = portfolio(network, { "placeholder-key" })
-        network.complete(NetworkResult(catalog, null))
-        coordinator.openAssetSearch()
-        network.complete(NetworkResult(null, "Network request failed"))
-        assertEquals(PortfolioRoute.PORTFOLIO, coordinator.state.value.currentRoute)
-        assertFalse(coordinator.assetSearchViewModel.state.value.isApiKeyInvalid)
-        assertEquals("Не удалось проверить API-ключ. Проверьте подключение к интернету и повторите попытку.",
-            coordinator.state.value.alertMessage)
-    }
-
-    @Test
-    fun doesNotRequestCatalogBeforeOpeningAndRejectsEmptyOrMalformedKey() {
-        val network = FakeNetwork()
-        var key = ""
-        val model = model(network, { key })
-        assertEquals(0, network.mapRequests)
-        for (value in listOf("", "   ", "placeholder\nkey")) {
-            key = value
-            var valid: Boolean? = null
-            model.openSearch { valid = it }
-            assertEquals(false, valid)
-            assertTrue(model.state.value.isApiKeyInvalid)
-            assertFalse(model.state.value.error.orEmpty().contains("placeholder"))
-        }
-        assertEquals(0, network.mapRequests)
-    }
-
-    @Test
-    fun rejectsInvalidKeyButAllowsRetryAfterNetworkFailure() {
-        val network = FakeNetwork()
-        val model = model(network, { "placeholder-key" })
-        model.openSearch()
-        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected", NetworkFailure.INVALID_KEY))
-        assertTrue(model.state.value.isApiKeyInvalid)
-        model.openSearch()
-        network.complete(NetworkResult(null, "Network request failed"))
-        assertFalse(model.state.value.isLoading)
-        assertEquals("Network request failed", model.state.value.error)
-    }
-
-    @Test
-    fun revalidatesOnOpeningAndIgnoresResponseForChangedKey() {
-        var key = "first-placeholder"
-        val network = FakeNetwork { key }
-        val model = model(network, { key })
-        model.openSearch()
-        network.complete(NetworkResult(catalog, null))
-        key = "second-placeholder"
-        model.openSearch()
-        assertTrue(model.state.value.assets.isEmpty())
-        assertTrue(model.state.value.isLoading)
-        key = "third-placeholder"
-        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected", NetworkFailure.INVALID_KEY))
-        assertFalse(model.state.value.isLoading)
-        model.openSearch()
-        network.complete(NetworkResult(catalog, null))
-        assertEquals(catalog, model.state.value.assets)
-        assertEquals(listOf("first-placeholder", "second-placeholder", "third-placeholder"), network.keys)
-    }
-
-    @Test
-    fun ignoresSupersededRequestWhileNewValidationIsLoading() {
-        val network = FakeNetwork()
-        val model = model(network, { "placeholder-key" })
-        model.openSearch()
-        model.openSearch()
-        network.complete(NetworkResult(null, "CoinMarketCap error 1001: API request rejected", NetworkFailure.INVALID_KEY))
-        assertTrue(model.state.value.isLoading)
-        network.complete(NetworkResult(catalog, null))
-        assertEquals(catalog, model.state.value.assets)
-    }
-
-    @Test
-    fun changingProfileKeyResetsNavigationAndNextSearchRevalidates() {
-        val profile = ProfileViewModel()
-        profile.setCoinMarketCapApiKey("first-placeholder")
-        val network = FakeNetwork(profile::getCoinMarketCapApiKey)
-        val portfolio = portfolio(network, profile::getCoinMarketCapApiKey)
-        network.complete(NetworkResult(catalog, null))
-        val tabs = TabBarCoordinator(portfolioCoordinator = portfolio, profileViewModel = profile)
-        portfolio.portfolioViewModel.onAssetSearch()
-        network.complete(NetworkResult(catalog, null))
-        tabs.selectTab(AppTab.PROFILE)
-        profile.setCoinMarketCapApiKey("second-placeholder")
-        assertEquals(AppTab.PORTFOLIO, tabs.state.value.selectedTab)
-        assertEquals(PortfolioRoute.PORTFOLIO, portfolio.state.value.currentRoute)
-        assertNull(portfolio.state.value.alertMessage)
-        assertEquals(2, network.mapRequests)
-        portfolio.openAssetSearch()
-        assertTrue(portfolio.assetSearchViewModel.state.value.assets.isEmpty())
-        assertEquals(listOf("first-placeholder", "first-placeholder", "second-placeholder"), network.keys)
-        network.complete(NetworkResult(catalog, null))
-    }
-
-    @Test
-    fun navigationResetIgnoresPendingValidation() {
-        val network = FakeNetwork()
-        val portfolio = portfolio(network, { "placeholder-key" })
-        network.complete(NetworkResult(catalog, null))
-        portfolio.openAssetSearch()
-        portfolio.resetNavigation()
-        network.complete(NetworkResult(catalog, null))
-        assertEquals(PortfolioRoute.PORTFOLIO, portfolio.state.value.currentRoute)
-        assertNull(portfolio.state.value.alertMessage)
     }
 
     @Test
@@ -266,25 +115,6 @@ class AssetSearchViewModelTest {
     }
 
     @Test
-    fun reopeningSearchReadsUpdatedProfileKeyAndBackReturnsToPortfolio() {
-        val storage = object : ProfileSecureStorage {
-            override var coinMarketCapApiKey = ""
-        }
-        val profile = ProfileViewModel(null, storage)
-        val network = FakeNetwork(profile::getCoinMarketCapApiKey)
-        val coordinator = portfolio(network, profile::getCoinMarketCapApiKey)
-        assertEquals(0, network.mapRequests)
-        profile.setCoinMarketCapApiKey("placeholder-key")
-        coordinator.portfolioViewModel.onAssetSearch()
-        assertEquals(listOf("placeholder-key"), network.keys)
-        network.complete(NetworkResult(catalog, null))
-        assertEquals(PortfolioRoute.ASSET_SEARCH, coordinator.state.value.currentRoute)
-        assertFalse(coordinator.assetSearchViewModel.state.value.toString().contains("placeholder-key"))
-        coordinator.assetSearchViewModel.onBack()
-        assertEquals(PortfolioRoute.PORTFOLIO, coordinator.state.value.currentRoute)
-    }
-
-    @Test
     fun generatesAndCachesPublicLogoAddressWithoutMetadataRequests() {
         val network = FakeNetwork()
         val model = model(network)
@@ -318,38 +148,21 @@ class AssetSearchViewModelTest {
     }
 }
 
-private fun portfolio(network: FakeNetwork, key: () -> String): PortfolioCoordinator {
-    network.keyProvider = key
-    return PortfolioCoordinator(network)
-}
+private fun model(network: FakeNetwork): AssetSearchViewModel =
+    AssetSearchViewModel({}, network, network::fetchImg)
 
-private fun model(network: FakeNetwork, key: () -> String = { "placeholder-key" }): AssetSearchViewModel {
-    network.keyProvider = key
-    return AssetSearchViewModel({}, network, network::fetchImg)
-}
-
-private class FakeNetwork(var keyProvider: () -> String = { "placeholder-key" }) : NetworkProtocol {
+private class FakeNetwork : NetworkProtocol {
     override fun validateApiKey(completion: (NetworkResult<Boolean>) -> Unit) =
         error("Unexpected key validation request")
 
     var mapRequests = 0
-    val keys = mutableListOf<String>()
     private val mapCompletions = mutableListOf<(NetworkResult<List<Asset>>) -> Unit>()
     var imageResult = NetworkResult<ByteArray>(null, "Image unavailable")
     var imageURL: String? = null
 
     override fun fetchMap(completion: (NetworkResult<List<Asset>>) -> Unit) {
-        val originalKey = keyProvider()
-        if (originalKey.trim().isEmpty() || originalKey.trim().any { it.isWhitespace() }) {
-            completion(NetworkResult(null, "API key is unavailable", NetworkFailure.INVALID_KEY))
-            return
-        }
         mapRequests++
-        keys += keyProvider()
-        mapCompletions += { result ->
-            completion(if (originalKey == keyProvider()) result else
-                NetworkResult(null, "Response is outdated", NetworkFailure.STALE_RESPONSE))
-        }
+        mapCompletions += completion
     }
 
     fun complete(result: NetworkResult<List<Asset>>) {

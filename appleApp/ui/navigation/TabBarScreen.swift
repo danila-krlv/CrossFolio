@@ -5,7 +5,6 @@ struct TabBarScreen: View {
     private let coordinator: TabBarCoordinator
     @State private var selectedTab: AppTab
     @State private var alertMessage: String?
-    @State private var stopObserving: (() -> Void)?
     @State private var stopObservingTabs: (() -> Void)?
 
     init(coordinator: TabBarCoordinator? = nil) {
@@ -15,7 +14,7 @@ struct TabBarScreen: View {
             initialValue: (coordinator.state.value as? TabBarState)?.selectedTab ?? .portfolio
         )
         _alertMessage = State(initialValue:
-            (coordinator.portfolioCoordinator.state.value as? PortfolioNavigationState)?.alertMessage)
+            (coordinator.state.value as? TabBarState)?.alertMessage)
     }
 
     private static func makeCoordinator() -> TabBarCoordinator {
@@ -31,7 +30,8 @@ struct TabBarScreen: View {
                 networkManager: networkManager
             ),
             analyticsViewModel: AnalyticsViewModel(),
-            profileViewModel: profileViewModel
+            profileViewModel: profileViewModel,
+            apiKeyValidator: ApiKeyValidator(networkManager: networkManager)
         )
     }
 
@@ -50,19 +50,18 @@ struct TabBarScreen: View {
                 .tag(AppTab.profile)
         }
         .onAppear {
-            stopObserving?()
-            stopObserving = coordinator.portfolioCoordinator.observeState { alertMessage = $0.alertMessage }
             stopObservingTabs?()
-            stopObservingTabs = coordinator.observeState { selectedTab = $0.selectedTab }
+            stopObservingTabs = coordinator.observeState {
+                selectedTab = $0.selectedTab
+                alertMessage = $0.alertMessage
+            }
         }
         .onDisappear {
-            stopObserving?()
-            stopObserving = nil
             stopObservingTabs?()
             stopObservingTabs = nil
         }
-        .alert("API-ключ CoinMarketCap", isPresented: alertPresented) {
-            Button("ОК") { coordinator.portfolioCoordinator.dismissAlert() }
+        .alert("Ошибка", isPresented: alertPresented) {
+            Button("ОК") { coordinator.dismissAlert() }
         } message: {
             Text(alertMessage ?? "")
         }
@@ -73,7 +72,7 @@ struct TabBarScreen: View {
             get: { alertMessage != nil },
             set: { presented in
                 if !presented {
-                    coordinator.portfolioCoordinator.dismissAlert()
+                    coordinator.dismissAlert()
                     alertMessage = nil
                 }
             }
