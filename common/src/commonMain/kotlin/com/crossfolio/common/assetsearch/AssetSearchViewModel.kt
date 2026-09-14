@@ -22,6 +22,7 @@ class AssetSearchViewModel(
     private val onBackRequested: () -> Unit,
     private val networkManager: NetworkProtocol? = null,
     private val apiKeyProvider: (() -> String)? = null,
+    private val onAssetSelected: (Asset) -> Unit = {},
 ) {
     private val _state = MutableStateFlow(AssetSearchState())
     val state: StateFlow<AssetSearchState> = _state.asStateFlow()
@@ -130,5 +131,7 @@ class AssetSearchViewModel(
         onBackRequested()
     }
 
-    // TODO: Add asset selection actions.
+    fun selectAsset(asset: Asset) {
+        onAssetSelected(asset)
+    }
 }

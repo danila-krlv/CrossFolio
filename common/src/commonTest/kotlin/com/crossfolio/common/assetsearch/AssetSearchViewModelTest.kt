@@ -21,6 +21,30 @@ class AssetSearchViewModelTest {
     )
 
     @Test
+    fun selectingAssetOpensEditAndBackPreservesSearch() {
+        val network = FakeNetwork()
+        val coordinator = PortfolioCoordinator(network, { "placeholder-key" })
+        network.complete(NetworkResult(catalog, null))
+        coordinator.openAssetSearch()
+        network.complete(NetworkResult(catalog, null))
+        val search = coordinator.assetSearchViewModel
+        search.search("ETH")
+        val searchState = search.state.value
+        val requestCount = network.mapRequests
+
+        search.selectAsset(catalog.first())
+        assertEquals(PortfolioRoute.EDIT, coordinator.state.value.currentRoute)
+        val edit = requireNotNull(coordinator.editViewModel)
+        assertEquals(catalog.first(), edit.asset)
+        edit.onBack()
+
+        assertEquals(PortfolioRoute.ASSET_SEARCH, coordinator.state.value.currentRoute)
+        assertEquals(searchState, search.state.value)
+        assertEquals(requestCount, network.mapRequests)
+        assertNull(coordinator.editViewModel)
+    }
+
+    @Test
     fun missingKeyShowsSameAlertAtStartupAndOnSearchAttempt() {
         val network = FakeNetwork()
         val coordinator = PortfolioCoordinator(network, { "" })

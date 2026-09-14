@@ -1,7 +1,9 @@
 package com.crossfolio.common.portfolio
 
+import com.crossfolio.common.asset.Asset
 import com.crossfolio.common.assetsearch.AssetSearchViewModel
 import com.crossfolio.common.assetsearch.NetworkProtocol
+import com.crossfolio.common.edit.EditViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +14,7 @@ import kotlinx.coroutines.launch
 enum class PortfolioRoute {
     PORTFOLIO,
     ASSET_SEARCH,
+    EDIT,
 }
 
 data class PortfolioNavigationState(
@@ -31,6 +34,8 @@ class PortfolioCoordinator(
 ) {
     private val _state = MutableStateFlow(PortfolioNavigationState())
     val state: StateFlow<PortfolioNavigationState> = _state.asStateFlow()
+    var editViewModel: EditViewModel? = null
+        private set
 
     val portfolioViewModel = PortfolioViewModel(
         onAssetSearchRequested = ::openAssetSearch,
@@ -39,6 +44,7 @@ class PortfolioCoordinator(
         onBackRequested = ::navigateBack,
         networkManager = networkManager,
         apiKeyProvider = apiKeyProvider,
+        onAssetSelected = ::openEdit,
     )
 
     private var navigationVersion = 0
@@ -53,11 +59,13 @@ class PortfolioCoordinator(
 
     fun resetNavigation() {
         navigationVersion++
+        editViewModel = null
         _state.value = PortfolioNavigationState()
     }
 
     fun openAssetSearch() {
         val version = ++navigationVersion
+        editViewModel = null
         _state.value = _state.value.copy(backStack = listOf(PortfolioRoute.PORTFOLIO), alertMessage = null)
         assetSearchViewModel.openSearch { valid ->
             if (version != navigationVersion) return@openSearch
@@ -92,12 +100,17 @@ class PortfolioCoordinator(
         return { job.cancel() }
     }
 
+    private fun openEdit(asset: Asset) {
+        if (_state.value.currentRoute != PortfolioRoute.ASSET_SEARCH) return
+        editViewModel = EditViewModel(asset, ::navigateBack)
+        _state.value = _state.value.copy(backStack = _state.value.backStack + PortfolioRoute.EDIT)
+    }
+
     private fun navigateBack() {
         val backStack = _state.value.backStack
         if (backStack.size > 1) {
+            editViewModel = null
             _state.value = PortfolioNavigationState(backStack = backStack.dropLast(1))
         }
     }
-
-    // TODO: Add asset details and quantity editing routes.
 }

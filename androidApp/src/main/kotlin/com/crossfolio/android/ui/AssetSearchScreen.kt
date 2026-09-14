@@ -2,6 +2,7 @@ package com.crossfolio.android.ui
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,7 +92,9 @@ private fun AssetRow(asset: Asset, logoUrl: String?, viewModel: AssetSearchViewM
     }
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth()
+            .clickable(onClickLabel = "Открыть ${asset.name}") { viewModel.selectAsset(asset) }
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

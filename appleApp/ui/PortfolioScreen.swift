@@ -18,8 +18,10 @@ struct PortfolioScreen: View {
         Group {
             if currentRoute == .portfolio {
                 portfolioContent
-            } else {
+            } else if currentRoute == .assetSearch {
                 assetSearchContent
+            } else if currentRoute == .edit, let viewModel = coordinator.editViewModel {
+                EditScreen(viewModel: viewModel)
             }
         }
         .onAppear {

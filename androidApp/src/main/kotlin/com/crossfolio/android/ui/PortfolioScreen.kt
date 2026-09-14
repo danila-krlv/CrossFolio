@@ -22,6 +22,7 @@ fun PortfolioScreen(coordinator: PortfolioCoordinator) {
     when (state.currentRoute) {
         PortfolioRoute.PORTFOLIO -> PortfolioContent(coordinator.portfolioViewModel)
         PortfolioRoute.ASSET_SEARCH -> AssetSearchScreen(coordinator.assetSearchViewModel)
+        PortfolioRoute.EDIT -> coordinator.editViewModel?.let { EditScreen(it) }
     }
 }
 

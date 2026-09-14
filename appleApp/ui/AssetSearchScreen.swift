@@ -38,8 +38,14 @@ struct AssetSearchScreen: View {
                 Spacer()
             } else {
                 List(state.assets, id: \.searchId) { asset in
-                    AssetSearchRow(asset: asset, logoURL: state.logoUrls[asset.searchId])
-                        .onAppear { viewModel.loadLogo(id: asset.searchId) }
+                    Button {
+                        viewModel.selectAsset(asset: asset)
+                    } label: {
+                        AssetSearchRow(asset: asset, logoURL: state.logoUrls[asset.searchId])
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .onAppear { viewModel.loadLogo(id: asset.searchId) }
                 }
                 .listStyle(.plain)
             }
