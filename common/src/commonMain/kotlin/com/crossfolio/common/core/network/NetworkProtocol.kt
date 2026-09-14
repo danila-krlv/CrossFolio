@@ -3,6 +3,9 @@ package com.crossfolio.common.core.network
 import com.crossfolio.common.core.asset.AssetCatalog
 
 interface NetworkProtocol : AssetCatalog {
+    // Success contains true; unsuccessful validation preserves the network failure.
+    fun validateApiKey(completion: (NetworkResult<Boolean>) -> Unit)
+
     fun fetchLogoURL(id: String, completion: (NetworkResult<String>) -> Unit)
 
     fun fetchLogoUrlArray(

@@ -15,6 +15,13 @@ class CoinMarketCapClient(
     private val transport: HttpTransport,
     private val apiKeyProvider: () -> String,
 ) : NetworkProtocol {
+    override fun validateApiKey(completion: (NetworkResult<Boolean>) -> Unit) {
+        request("v1/key/info", { payload ->
+            payload.getValue("data").jsonObject
+            true
+        }, completion)
+    }
+
     // Invoke from the main thread, matching ViewModel actions and transport callbacks.
     override fun fetchMap(completion: (NetworkResult<List<Asset>>) -> Unit) {
         request("v1/cryptocurrency/map?start=1&limit=1000", { payload ->

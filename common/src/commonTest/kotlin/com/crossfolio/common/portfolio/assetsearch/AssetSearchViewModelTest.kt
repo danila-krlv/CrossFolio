@@ -329,6 +329,9 @@ private fun model(network: FakeNetwork, key: () -> String = { "placeholder-key" 
 }
 
 private class FakeNetwork(var keyProvider: () -> String = { "placeholder-key" }) : NetworkProtocol {
+    override fun validateApiKey(completion: (NetworkResult<Boolean>) -> Unit) =
+        error("Unexpected key validation request")
+
     var mapRequests = 0
     val keys = mutableListOf<String>()
     private val mapCompletions = mutableListOf<(NetworkResult<List<Asset>>) -> Unit>()

@@ -14,6 +14,72 @@ import kotlin.test.assertTrue
 
 class CoinMarketCapClientTest {
     @Test
+    fun validatesCurrentApiKeyThroughKeyInfo() {
+        val transport = FakeTransport()
+        var key = "old-placeholder"
+        val client = CoinMarketCapClient(transport) { key }
+        key = " current-placeholder "
+        var result: NetworkResult<Boolean>? = null
+        client.validateApiKey { result = it }
+        assertNull(result)
+        val request = transport.requests.single()
+        assertEquals("https://pro-api.coinmarketcap.com/v1/key/info", request.url)
+        assertEquals("current-placeholder", request.headers["X-CMC_PRO_API_KEY"])
+        assertFalse(request.followRedirects)
+        transport.complete(200, """{"status":{"error_code":0},"data":{}}""")
+        assertEquals(true, result?.value)
+        assertNull(result?.error)
+        assertNull(result?.failure)
+    }
+
+    @Test
+    fun keyValidationPreservesFailureReasons() {
+        val transport = FakeTransport()
+        var key = "placeholder"
+        val client = CoinMarketCapClient(transport) { key }
+        for ((status, body, failure) in listOf(
+            Triple(401, """{"status":{"error_code":1001}}""", NetworkFailure.INVALID_KEY),
+            Triple(429, "{}", NetworkFailure.HTTP),
+            Triple(200, "invalid json", NetworkFailure.INVALID_RESPONSE),
+            Triple(200, """{"status":{"error_code":0}}""", NetworkFailure.INVALID_RESPONSE),
+            Triple(200, """{"status":{"error_code":0},"data":null}""", NetworkFailure.INVALID_RESPONSE),
+            Triple(200, """{"status":{"error_code":0},"data":[]}""", NetworkFailure.INVALID_RESPONSE),
+        )) {
+            var result: NetworkResult<Boolean>? = null
+            client.validateApiKey { result = it }
+            transport.complete(status, body)
+            assertNull(result?.value)
+            assertEquals(failure, result?.failure)
+            assertTrue(result?.error != null)
+        }
+        var result: NetworkResult<Boolean>? = null
+        client.validateApiKey { result = it }
+        transport.callback(NetworkResult(null, "Network request failed", NetworkFailure.TRANSPORT))
+        assertNull(result?.value)
+        assertEquals(NetworkFailure.TRANSPORT, result?.failure)
+        assertEquals("Network request failed", result?.error)
+        result = null
+        client.validateApiKey { result = it }
+        key = "changed-placeholder"
+        transport.complete(200, """{"status":{"error_code":0},"data":{}}""")
+        assertNull(result?.value)
+        assertEquals(NetworkFailure.STALE_RESPONSE, result?.failure)
+        val requestCount = transport.requests.size
+        for (value in listOf("", "   ", "placeholder\nkey")) {
+            key = value
+            result = null
+            client.validateApiKey { result = it }
+            assertNull(result?.value)
+            assertEquals(NetworkFailure.INVALID_KEY, result?.failure)
+        }
+        CoinMarketCapClient(transport) { error("private-placeholder") }.validateApiKey { result = it }
+        assertNull(result?.value)
+        assertEquals(NetworkFailure.INVALID_KEY, result?.failure)
+        assertEquals("API key is unavailable", result?.error)
+        assertEquals(requestCount, transport.requests.size)
+    }
+
+    @Test
     fun buildsCatalogRequestAndDecodesStableIdentities() {
         val transport = FakeTransport()
         var key = "old-placeholder"
