@@ -1,7 +1,7 @@
 package com.crossfolio.common.portfolio.assetsearch
 
 import com.crossfolio.common.core.asset.Asset
-import com.crossfolio.common.core.network.NetworkProtocol
+import com.crossfolio.common.core.asset.AssetCatalog
 import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.PortfolioCoordinator
 import com.crossfolio.common.portfolio.PortfolioRoute
@@ -21,7 +21,7 @@ class AssetSearchViewModelTest {
     @Test
     fun selectingAssetOpensEditAndBackPreservesSearch() {
         val network = FakeNetwork()
-        val coordinator = PortfolioCoordinator(network)
+        val coordinator = PortfolioCoordinator(network, network::fetchImg)
         coordinator.setSearchEnabled(true)
         coordinator.openAssetSearch()
         network.complete(NetworkResult(catalog, null))
@@ -126,14 +126,13 @@ class AssetSearchViewModelTest {
         assertEquals(state, model.state.value)
         assertEquals(mapOf("1027" to "https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png"),
             model.state.value.logoUrls)
-        // Fake metadata methods fail immediately if this path accidentally uses the authenticated API.
         assertEquals(1, network.mapRequests)
     }
 
     @Test
     fun forwardsImageResultAndHandlesMissingNetworkManager() {
         val network = FakeNetwork()
-        val model = model(network)
+        val model = PortfolioCoordinator(network, network::fetchImg).assetSearchViewModel
         model.loadCatalog()
         val expected = NetworkResult(byteArrayOf(0, -1, 127), null)
         network.imageResult = expected
@@ -151,13 +150,7 @@ class AssetSearchViewModelTest {
 private fun model(network: FakeNetwork): AssetSearchViewModel =
     AssetSearchViewModel({}, network, network::fetchImg)
 
-private class FakeNetwork : NetworkProtocol {
-    override fun validateApiKey(apiKey: String, completion: (NetworkResult<Boolean>) -> Unit) =
-        error("Unexpected key validation request")
-
-    override fun validateApiKey(completion: (NetworkResult<Boolean>) -> Unit) =
-        error("Unexpected key validation request")
-
+private class FakeNetwork : AssetCatalog {
     var mapRequests = 0
     private val mapCompletions = mutableListOf<(NetworkResult<List<Asset>>) -> Unit>()
     var imageResult = NetworkResult<ByteArray>(null, "Image unavailable")
@@ -173,17 +166,9 @@ private class FakeNetwork : NetworkProtocol {
         completion(result)
     }
 
-    override fun fetchImg(url: String, completion: (NetworkResult<ByteArray>) -> Unit) {
+    fun fetchImg(url: String, completion: (NetworkResult<ByteArray>) -> Unit) {
         imageURL = url
         completion(imageResult)
     }
 
-    override fun fetchLogoURL(id: String, completion: (NetworkResult<String>) -> Unit) =
-        error("Unexpected metadata request")
-
-    override fun fetchLogoUrlArray(idString: String, idArray: List<String>,
-        completion: (NetworkResult<Map<String, String>>) -> Unit) = error("Unexpected metadata request")
-
-    override fun fetchPriceArray(idString: String, idArray: List<String>,
-        completion: (NetworkResult<Map<String, Double>>) -> Unit) = error("Unexpected price request")
 }

@@ -19,9 +19,7 @@ data class ApiKeyValidationState(
 class ApiKeyValidator(
     private val validate: (String, (NetworkResult<Boolean>) -> Unit) -> Unit,
 ) {
-    constructor(networkManager: NetworkProtocol) : this(networkManager::validateApiKey)
-
-    constructor(transport: HttpTransport) : this(CoinMarketCapClient(transport) { "" })
+    constructor(validation: ApiKeyValidation) : this(validation::validateApiKey)
 
     fun check(apiKey: String, completion: (NetworkResult<Boolean>) -> Unit) {
         validate(apiKey, completion)

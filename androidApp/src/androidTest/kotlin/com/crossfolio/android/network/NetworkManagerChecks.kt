@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 object NetworkManagerChecks {
     fun run(): Int {
         catalogUsesCurrentKeyAndStableIDs()
-        metadataAndQuotesUseCMCIDs()
+        quotesUseCMCIDs()
         imagesDoNotReadOrTransmitKey()
         failuresDoNotExposeServerOrTransportDetails()
         missingKeyAndInvalidURLDoNotOpenConnections()
@@ -48,17 +48,7 @@ object NetworkManagerChecks {
         check(connection.disconnected)
     }
 
-    private fun metadataAndQuotesUseCMCIDs() {
-        val metadata = FixtureConnection(body =
-            """{"status":{"error_code":0},"data":{"1":{"logo":"https://example.com/1.png"}}}""")
-        val manager = CoinMarketCapClient(NetworkManager { metadata }) { "test-placeholder" }
-        val logo = awaitResult<String> { manager.fetchLogoURL("1", it) }
-        check(logo.value == "https://example.com/1.png")
-        val missing = awaitResult<Map<String, String>> {
-            manager.fetchLogoUrlArray("1", listOf("missing"), it)
-        }
-        check(missing.value == null && missing.error != null)
-
+    private fun quotesUseCMCIDs() {
         val prices = FixtureConnection(body = """{"status":{"error_code":0},"data":{
             "1":{"quote":{"USD":{"price":12.5}}},"2":{"quote":{"USD":{"price":20}}}}}""")
         var query: String? = null

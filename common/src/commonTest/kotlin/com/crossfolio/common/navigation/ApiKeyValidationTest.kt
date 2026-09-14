@@ -5,7 +5,8 @@ import com.crossfolio.common.core.network.ApiKeyManager
 import com.crossfolio.common.core.network.ApiKeyValidationStatus
 import com.crossfolio.common.core.network.ApiKeyValidator
 import com.crossfolio.common.core.network.NetworkFailure
-import com.crossfolio.common.core.network.NetworkProtocol
+import com.crossfolio.common.core.asset.AssetCatalog
+import com.crossfolio.common.core.network.ApiKeyValidation
 import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.PortfolioCoordinator
 import com.crossfolio.common.portfolio.PortfolioRoute
@@ -289,7 +290,7 @@ private class ManualTimer {
     }
 }
 
-private class FakeNetwork : NetworkProtocol {
+private class FakeNetwork : AssetCatalog, ApiKeyValidation {
     val keys = mutableListOf<String>()
     val validations = mutableListOf<(NetworkResult<Boolean>) -> Unit>()
     val catalogs = mutableListOf<(NetworkResult<List<Asset>>) -> Unit>()
@@ -297,12 +298,5 @@ private class FakeNetwork : NetworkProtocol {
         keys += apiKey
         validations += completion
     }
-    override fun validateApiKey(completion: (NetworkResult<Boolean>) -> Unit) = error("Use explicit key")
     override fun fetchMap(completion: (NetworkResult<List<Asset>>) -> Unit) { catalogs += completion }
-    override fun fetchLogoURL(id: String, completion: (NetworkResult<String>) -> Unit) = error("Unexpected request")
-    override fun fetchLogoUrlArray(idString: String, idArray: List<String>,
-        completion: (NetworkResult<Map<String, String>>) -> Unit) = error("Unexpected request")
-    override fun fetchImg(url: String, completion: (NetworkResult<ByteArray>) -> Unit) = error("Unexpected request")
-    override fun fetchPriceArray(idString: String, idArray: List<String>,
-        completion: (NetworkResult<Map<String, Double>>) -> Unit) = error("Unexpected request")
 }

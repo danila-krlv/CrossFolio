@@ -1,6 +1,7 @@
 package com.crossfolio.common.core.network
 
 import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.core.asset.AssetCatalog
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -14,14 +15,7 @@ import kotlinx.serialization.json.long
 class CoinMarketCapClient(
     private val transport: HttpTransport,
     private val apiKeyProvider: () -> String,
-) : NetworkProtocol {
-    override fun validateApiKey(completion: (NetworkResult<Boolean>) -> Unit) {
-        request("v1/key/info", { payload ->
-            payload.getValue("data").jsonObject
-            true
-        }, completion)
-    }
-
+) : AssetCatalog, ApiKeyValidation {
     override fun validateApiKey(apiKey: String, completion: (NetworkResult<Boolean>) -> Unit) {
         request("v1/key/info", { payload ->
             payload.getValue("data").jsonObject
@@ -45,21 +39,7 @@ class CoinMarketCapClient(
         }, completion)
     }
 
-    override fun fetchLogoURL(id: String, completion: (NetworkResult<String>) -> Unit) {
-        fetchLogoUrlArray(id, listOf(id)) { result ->
-            completion(NetworkResult(result.value?.get(id), result.error, result.failure))
-        }
-    }
-
-    override fun fetchLogoUrlArray(idString: String, idArray: List<String>,
-        completion: (NetworkResult<Map<String, String>>) -> Unit) {
-        request("v2/cryptocurrency/info?id=${encode(idString)}&aux=logo", { payload ->
-            val data = payload.getValue("data").jsonObject
-            idArray.associateWith { data.getValue(it).jsonObject.string("logo") }
-        }, completion)
-    }
-
-    override fun fetchPriceArray(idString: String, idArray: List<String>,
+    fun fetchPriceArray(idString: String, idArray: List<String>,
         completion: (NetworkResult<Map<String, Double>>) -> Unit) {
         request("v2/cryptocurrency/quotes/latest?id=${encode(idString)}&convert=USD", { payload ->
             val data = payload.getValue("data").jsonObject
@@ -70,7 +50,7 @@ class CoinMarketCapClient(
         }, completion)
     }
 
-    override fun fetchImg(url: String, completion: (NetworkResult<ByteArray>) -> Unit) {
+    fun fetchImg(url: String, completion: (NetworkResult<ByteArray>) -> Unit) {
         transport.execute(HttpRequest(url)) { result ->
             val response = result.value
             when {

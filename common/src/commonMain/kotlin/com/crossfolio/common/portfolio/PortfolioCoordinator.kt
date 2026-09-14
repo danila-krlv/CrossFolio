@@ -2,7 +2,8 @@ package com.crossfolio.common.portfolio
 
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.network.NetworkFailure
-import com.crossfolio.common.core.network.NetworkProtocol
+import com.crossfolio.common.core.asset.AssetCatalog
+import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.assetsearch.AssetSearchViewModel
 import com.crossfolio.common.portfolio.edit.EditViewModel
 import com.crossfolio.common.portfolio.overview.PortfolioViewModel
@@ -31,7 +32,8 @@ data class PortfolioNavigationState(
 }
 
 class PortfolioCoordinator(
-    networkManager: NetworkProtocol? = null,
+    assetCatalog: AssetCatalog? = null,
+    imageLoader: ((String, (NetworkResult<ByteArray>) -> Unit) -> Unit)? = null,
 ) {
     private val _state = MutableStateFlow(PortfolioNavigationState())
     val state: StateFlow<PortfolioNavigationState> = _state.asStateFlow()
@@ -43,8 +45,8 @@ class PortfolioCoordinator(
     )
     val assetSearchViewModel = AssetSearchViewModel(
         onBackRequested = ::navigateBack,
-        assetCatalog = networkManager,
-        imageLoader = networkManager?.let { it::fetchImg },
+        assetCatalog = assetCatalog,
+        imageLoader = imageLoader,
         onAssetSelected = ::openEdit,
         onCatalogFailed = { onNetworkFailure(it) },
     )

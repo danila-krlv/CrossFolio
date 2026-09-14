@@ -26,13 +26,13 @@ class CoinMarketCapClientTest {
     }
 
     @Test
-    fun validatesCurrentApiKeyThroughKeyInfo() {
+    fun validatesExplicitApiKeyThroughKeyInfo() {
         val transport = FakeTransport()
         var key = "old-placeholder"
         val client = CoinMarketCapClient(transport) { key }
         key = " current-placeholder "
         var result: NetworkResult<Boolean>? = null
-        client.validateApiKey { result = it }
+        client.validateApiKey(key) { result = it }
         assertNull(result)
         val request = transport.requests.single()
         assertEquals("https://pro-api.coinmarketcap.com/v1/key/info", request.url)
@@ -58,36 +58,31 @@ class CoinMarketCapClientTest {
             Triple(200, """{"status":{"error_code":0},"data":[]}""", NetworkFailure.INVALID_RESPONSE),
         )) {
             var result: NetworkResult<Boolean>? = null
-            client.validateApiKey { result = it }
+            client.validateApiKey(key) { result = it }
             transport.complete(status, body)
             assertNull(result?.value)
             assertEquals(failure, result?.failure)
             assertTrue(result?.error != null)
         }
         var result: NetworkResult<Boolean>? = null
-        client.validateApiKey { result = it }
+        client.validateApiKey(key) { result = it }
         transport.callback(NetworkResult(null, "Network request failed", NetworkFailure.TRANSPORT))
         assertNull(result?.value)
         assertEquals(NetworkFailure.TRANSPORT, result?.failure)
         assertEquals("Network request failed", result?.error)
-        result = null
-        client.validateApiKey { result = it }
-        key = "changed-placeholder"
-        transport.complete(200, """{"status":{"error_code":0},"data":{}}""")
-        assertNull(result?.value)
-        assertEquals(NetworkFailure.STALE_RESPONSE, result?.failure)
         val requestCount = transport.requests.size
         for (value in listOf("", "   ", "placeholder\nkey")) {
             key = value
             result = null
-            client.validateApiKey { result = it }
+            client.validateApiKey(key) { result = it }
             assertNull(result?.value)
             assertEquals(NetworkFailure.INVALID_KEY, result?.failure)
         }
-        CoinMarketCapClient(transport) { error("private-placeholder") }.validateApiKey { result = it }
-        assertNull(result?.value)
-        assertEquals(NetworkFailure.INVALID_KEY, result?.failure)
-        assertEquals("API key is unavailable", result?.error)
+        CoinMarketCapClient(transport) { error("private-placeholder") }.fetchMap {
+            assertNull(it.value)
+            assertEquals(NetworkFailure.INVALID_KEY, it.failure)
+            assertEquals("API key is unavailable", it.error)
+        }
         assertEquals(requestCount, transport.requests.size)
     }
 
@@ -163,16 +158,12 @@ class CoinMarketCapClientTest {
     }
 
     @Test
-    fun metadataQuotesAndPublicImagesUseSharedClient() {
+    fun quotesAndPublicImagesUseSharedClient() {
         val transport = FakeTransport()
         val client = CoinMarketCapClient(transport) { "placeholder" }
-        client.fetchLogoURL("1") { assertEquals("https://example.com/logo", it.value) }
-        transport.complete(200, """{"status":{"error_code":0},"data":{"1":{"logo":"https://example.com/logo"}}}""")
         client.fetchPriceArray("1,2", listOf("1", "2")) { assertEquals(mapOf("1" to 12.5, "2" to 20.0), it.value) }
         assertTrue(transport.requests.last().url.contains("id=1%2C2&convert=USD"))
         transport.complete(200, """{"status":{"error_code":0},"data":{"1":{"quote":{"USD":{"price":12.5}}},"2":{"quote":{"USD":{"price":20}}}}}""")
-        client.fetchLogoURL("missing") { assertEquals(NetworkFailure.INVALID_RESPONSE, it.failure) }
-        transport.complete(200, """{"status":{"error_code":0},"data":{}}""")
         CoinMarketCapClient(transport) { error("Image must not read key") }.fetchImg("https://example.com/logo") {
             assertTrue(it.value!!.contentEquals(byteArrayOf(0, -1, 127)))
         }

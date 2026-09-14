@@ -21,15 +21,18 @@ struct TabBarScreen: View {
         let secureStorage = AppleProfileSecureStorage()
         let transport = NetworkManager()
         let manager = ApiKeyManager(secureStorage: secureStorage,
-            validator: ApiKeyValidator(transport: transport))
-        let networkManager = CoinMarketCapClient(transport: transport, apiKeyProvider: {
+            validator: ApiKeyValidator(validation: CoinMarketCapClient(transport: transport, apiKeyProvider: { "" })))
+        let client = CoinMarketCapClient(transport: transport, apiKeyProvider: {
             manager.getSavedKey()
         })
         let profileViewModel = ProfileViewModel(
             preferencesStorage: AppleProfilePreferencesStorage(), apiKeyManager: manager)
         return TabBarCoordinator(
             portfolioCoordinator: PortfolioCoordinator(
-                networkManager: networkManager
+                assetCatalog: client,
+                imageLoader: { url, completion in
+                    client.fetchImg(url: url) { result in _ = completion(result) }
+                }
             ),
             analyticsViewModel: AnalyticsViewModel(),
             profileViewModel: profileViewModel,

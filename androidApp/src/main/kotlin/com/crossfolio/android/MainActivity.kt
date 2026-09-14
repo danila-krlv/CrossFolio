@@ -19,12 +19,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val secureStorage = AndroidProfileSecureStorage(this)
         val transport = NetworkManager()
-        val manager = ApiKeyManager(secureStorage, ApiKeyValidator(transport))
+        val manager = ApiKeyManager(secureStorage, ApiKeyValidator(CoinMarketCapClient(transport) { "" }))
         val client = CoinMarketCapClient(transport, manager::getSavedKey)
         val profileViewModel = ProfileViewModel(AndroidProfilePreferencesStorage(this), manager)
         val coordinator = TabBarCoordinator(
             portfolioCoordinator = PortfolioCoordinator(
-                networkManager = client,
+                assetCatalog = client,
+                imageLoader = client::fetchImg,
             ),
             profileViewModel = profileViewModel,
             apiKeyManager = manager,
