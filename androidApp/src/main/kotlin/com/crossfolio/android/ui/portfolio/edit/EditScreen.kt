@@ -1,4 +1,4 @@
-package com.crossfolio.android.ui
+package com.crossfolio.android.ui.portfolio.edit
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -11,7 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.crossfolio.common.edit.EditViewModel
+import com.crossfolio.common.portfolio.edit.EditViewModel
 
 @Composable
 fun EditScreen(viewModel: EditViewModel) {

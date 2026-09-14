@@ -1,9 +1,10 @@
 package com.crossfolio.common.portfolio
 
-import com.crossfolio.common.asset.Asset
-import com.crossfolio.common.assetsearch.AssetSearchViewModel
-import com.crossfolio.common.assetsearch.NetworkProtocol
-import com.crossfolio.common.edit.EditViewModel
+import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.portfolio.assetsearch.AssetSearchViewModel
+import com.crossfolio.common.portfolio.assetsearch.NetworkProtocol
+import com.crossfolio.common.portfolio.edit.EditViewModel
+import com.crossfolio.common.portfolio.overview.PortfolioViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

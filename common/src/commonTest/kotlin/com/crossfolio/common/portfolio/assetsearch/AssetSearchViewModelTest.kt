@@ -1,6 +1,6 @@
-package com.crossfolio.common.assetsearch
+package com.crossfolio.common.portfolio.assetsearch
 
-import com.crossfolio.common.asset.Asset
+import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.navigation.AppTab
 import com.crossfolio.common.navigation.TabBarCoordinator
 import com.crossfolio.common.portfolio.PortfolioCoordinator

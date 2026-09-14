@@ -1,4 +1,4 @@
-package com.crossfolio.android.ui
+package com.crossfolio.android.ui.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

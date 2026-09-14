@@ -3,9 +3,9 @@ package com.crossfolio.android.network
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import com.crossfolio.common.asset.Asset
-import com.crossfolio.common.assetsearch.NetworkProtocol
-import com.crossfolio.common.assetsearch.NetworkResult
+import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.portfolio.assetsearch.NetworkProtocol
+import com.crossfolio.common.portfolio.assetsearch.NetworkResult
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL

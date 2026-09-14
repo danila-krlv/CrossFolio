@@ -1,4 +1,4 @@
-package com.crossfolio.android.ui
+package com.crossfolio.android.ui.portfolio.assetsearch
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
@@ -31,8 +31,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import com.crossfolio.common.asset.Asset
-import com.crossfolio.common.assetsearch.AssetSearchViewModel
+import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.portfolio.assetsearch.AssetSearchViewModel
 import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine

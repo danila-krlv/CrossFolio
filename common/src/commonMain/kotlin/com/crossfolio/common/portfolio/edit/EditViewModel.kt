@@ -1,6 +1,6 @@
-package com.crossfolio.common.edit
+package com.crossfolio.common.portfolio.edit
 
-import com.crossfolio.common.asset.Asset
+import com.crossfolio.common.core.asset.Asset
 
 class EditViewModel(
     val asset: Asset,

@@ -1,4 +1,4 @@
-package com.crossfolio.common.asset
+package com.crossfolio.common.core.asset
 
 enum class SearchPlatform {
     COIN_MARKET_CAP,
@@ -11,4 +11,6 @@ data class Asset(
     val name: String = "",
     val slug: String = "",
     val rank: Int? = null,
-)
+) {
+    val identity: AssetIdentity get() = AssetIdentity(searchId, searchPlatform)
+}

@@ -1,4 +1,4 @@
-package com.crossfolio.common.portfolio
+package com.crossfolio.common.portfolio.overview
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

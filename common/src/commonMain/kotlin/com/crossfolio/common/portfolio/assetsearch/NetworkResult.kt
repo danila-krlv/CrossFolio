@@ -1,4 +1,4 @@
-package com.crossfolio.common.assetsearch
+package com.crossfolio.common.portfolio.assetsearch
 
 class NetworkResult<T : Any>(
     val value: T?,

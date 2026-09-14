@@ -1,7 +1,7 @@
 package com.crossfolio.android.network
 
 import android.os.Looper
-import com.crossfolio.common.assetsearch.NetworkResult
+import com.crossfolio.common.portfolio.assetsearch.NetworkResult
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.net.HttpURLConnection

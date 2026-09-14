@@ -1,21 +1,24 @@
-package com.crossfolio.android.ui
+package com.crossfolio.android.ui.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.crossfolio.android.ui.analytics.AnalyticsScreen
+import com.crossfolio.android.ui.portfolio.PortfolioScreen
+import com.crossfolio.android.ui.profile.ProfileScreen
 import com.crossfolio.common.navigation.AppTab
 import com.crossfolio.common.navigation.TabBarCoordinator
 

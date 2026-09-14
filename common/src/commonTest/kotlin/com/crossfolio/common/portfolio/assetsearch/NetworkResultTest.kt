@@ -1,6 +1,6 @@
-package com.crossfolio.common.assetsearch
+package com.crossfolio.common.portfolio.assetsearch
 
-import com.crossfolio.common.asset.Asset
+import com.crossfolio.common.core.asset.Asset
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import com.crossfolio.android.network.NetworkManager
 import com.crossfolio.android.storage.AndroidProfilePreferencesStorage
 import com.crossfolio.android.storage.AndroidProfileSecureStorage
-import com.crossfolio.android.ui.TabBarScreen
+import com.crossfolio.android.ui.navigation.TabBarScreen
 import com.crossfolio.common.navigation.TabBarCoordinator
 import com.crossfolio.common.portfolio.PortfolioCoordinator
 import com.crossfolio.common.profile.ProfileViewModel

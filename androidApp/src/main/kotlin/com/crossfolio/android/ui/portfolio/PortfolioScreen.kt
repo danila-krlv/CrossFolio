@@ -1,4 +1,4 @@
-package com.crossfolio.android.ui
+package com.crossfolio.android.ui.portfolio
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,9 +11,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.crossfolio.android.ui.portfolio.assetsearch.AssetSearchScreen
+import com.crossfolio.android.ui.portfolio.edit.EditScreen
 import com.crossfolio.common.portfolio.PortfolioCoordinator
 import com.crossfolio.common.portfolio.PortfolioRoute
-import com.crossfolio.common.portfolio.PortfolioViewModel
+import com.crossfolio.common.portfolio.overview.PortfolioViewModel
 
 @Composable
 fun PortfolioScreen(coordinator: PortfolioCoordinator) {
