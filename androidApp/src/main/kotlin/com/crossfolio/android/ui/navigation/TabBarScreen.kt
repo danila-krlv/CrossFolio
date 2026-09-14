@@ -27,16 +27,15 @@ fun TabBarScreen(
     coordinator: TabBarCoordinator = remember { TabBarCoordinator() },
 ) {
     val state by coordinator.state.collectAsState()
-    val portfolioState by coordinator.portfolioCoordinator.state.collectAsState()
 
     MaterialTheme {
-        portfolioState.alertMessage?.let { message ->
+        state.alertMessage?.let { message ->
             AlertDialog(
-                onDismissRequest = coordinator.portfolioCoordinator::dismissAlert,
-                title = { Text("API-ключ CoinMarketCap") },
+                onDismissRequest = coordinator::dismissAlert,
+                title = { Text("Ошибка") },
                 text = { Text(message) },
                 confirmButton = {
-                    TextButton(onClick = coordinator.portfolioCoordinator::dismissAlert) { Text("ОК") }
+                    TextButton(onClick = coordinator::dismissAlert) { Text("ОК") }
                 },
             )
         }

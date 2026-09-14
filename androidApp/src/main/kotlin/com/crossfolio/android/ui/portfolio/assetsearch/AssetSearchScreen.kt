@@ -61,8 +61,8 @@ fun AssetSearchScreen(viewModel: AssetSearchViewModel) {
                 CircularProgressIndicator()
             }
             state.error != null -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Не удалось загрузить каталог. Проверьте API-ключ в профиле и подключение к интернету.")
-                Button(onClick = { viewModel.openSearch() }) { Text("Повторить") }
+                Text("Не удалось загрузить каталог.")
+                Button(onClick = { viewModel.loadCatalog(false) }) { Text("Повторить") }
             }
             state.assets.isEmpty() -> Text("Монеты не найдены")
             else -> LazyColumn(modifier = Modifier.weight(1f)) {

@@ -3,9 +3,11 @@ import SwiftUI
 
 struct ProfileScreen: View {
     let viewModel: ProfileViewModel
+    @FocusState private var isApiKeyFocused: Bool
     @State private var userName: String
     @State private var theme: AppTheme
     @State private var coinMarketCapApiKey: String
+    @State private var stopObservingKey: (() -> Void)?
 
     init(viewModel: ProfileViewModel) {
         self.viewModel = viewModel
@@ -28,6 +30,28 @@ struct ProfileScreen: View {
             .pickerStyle(.segmented)
 
             SecureField("CoinMarketCap API-ключ", text: apiKeyBinding)
+                .focused($isApiKeyFocused)
+                .onSubmit {
+                    viewModel.finishApiKeyEditing()
+                    isApiKeyFocused = false
+                }
+                .onChange(of: isApiKeyFocused) { _, focused in
+                    if focused { viewModel.beginApiKeyEditing() }
+                    else { viewModel.finishApiKeyEditing() }
+                }
+        }
+        .onAppear {
+            stopObservingKey?()
+            stopObservingKey = viewModel.apiKeyManager.observeState { state in
+                if !state.isEditing && (state.status == .valid || state.status == .missing) {
+                    coinMarketCapApiKey = viewModel.getCoinMarketCapApiKey()
+                }
+            }
+        }
+        .onDisappear {
+            viewModel.finishApiKeyEditing()
+            stopObservingKey?()
+            stopObservingKey = nil
         }
     }
 
@@ -56,7 +80,7 @@ struct ProfileScreen: View {
             get: { coinMarketCapApiKey },
             set: {
                 coinMarketCapApiKey = $0
-                viewModel.setCoinMarketCapApiKey(apiKey: $0)
+                viewModel.editCoinMarketCapApiKey(apiKey: $0)
             }
         )
     }

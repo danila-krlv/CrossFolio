@@ -3,7 +3,8 @@ package com.crossfolio.android.ui.portfolio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -22,14 +23,14 @@ fun PortfolioScreen(coordinator: PortfolioCoordinator) {
     val state by coordinator.state.collectAsState()
 
     when (state.currentRoute) {
-        PortfolioRoute.PORTFOLIO -> PortfolioContent(coordinator.portfolioViewModel)
+        PortfolioRoute.PORTFOLIO -> PortfolioContent(coordinator.portfolioViewModel, state.isSearchEnabled)
         PortfolioRoute.ASSET_SEARCH -> AssetSearchScreen(coordinator.assetSearchViewModel)
         PortfolioRoute.EDIT -> coordinator.editViewModel?.let { EditScreen(it) }
     }
 }
 
 @Composable
-private fun PortfolioContent(viewModel: PortfolioViewModel) {
+private fun PortfolioContent(viewModel: PortfolioViewModel, isSearchEnabled: Boolean) {
     val state by viewModel.state.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -37,11 +38,13 @@ private fun PortfolioContent(viewModel: PortfolioViewModel) {
             text = state.message,
             modifier = Modifier.align(Alignment.Center),
         )
-        FloatingActionButton(
+        FilledIconButton(
+            enabled = isSearchEnabled,
             onClick = viewModel::onAssetSearch,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(24.dp),
+                .padding(24.dp)
+                .size(56.dp),
         ) {
             Text(text = "+")
         }
