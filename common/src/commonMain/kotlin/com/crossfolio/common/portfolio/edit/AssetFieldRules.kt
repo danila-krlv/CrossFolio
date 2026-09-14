@@ -35,4 +35,23 @@ class AssetFieldRules(
         require(value.fractionDigits <= fractionDigits) { "Too many fractional digits" }
         require(value <= maximumInputValue) { "Input exceeds the maximum value" }
     }
+
+    fun parseQuantity(text: String): DecimalValue = parseInput(text, quantityFractionDigits, false)
+
+    fun parseManualPrice(text: String): DecimalValue = parseInput(text, manualPriceFractionDigits, false)
+
+    fun parseCommission(text: String): DecimalValue =
+        if (text.isBlank()) DecimalValue.ZERO else parseInput(text, commissionFractionDigits, true)
+
+    private fun parseInput(text: String, fractionDigits: Int, allowZero: Boolean): DecimalValue {
+        val normalized = text.trim().replace(',', '.')
+        require(normalized.matches(Regex("[0-9]+(?:\\.[0-9]+)?"))) { "Введите корректное число" }
+        require(normalized.substringAfter('.', "").length <= fractionDigits) {
+            "Допустимо знаков после запятой: $fractionDigits"
+        }
+        val value = DecimalValue.parse(normalized)
+        require(allowZero || !value.isZero) { "Значение должно быть больше нуля" }
+        require(value <= maximumInputValue) { "Максимум: ${maximumInputValue.value}" }
+        return value
+    }
 }
