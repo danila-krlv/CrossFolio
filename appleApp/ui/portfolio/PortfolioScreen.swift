@@ -23,8 +23,12 @@ struct PortfolioScreen: View {
                 portfolioContent
             } else if currentRoute == .assetSearch {
                 assetSearchContent
-            } else if currentRoute == .edit, let viewModel = coordinator.editViewModel {
-                EditScreen(viewModel: viewModel)
+            } else if currentRoute == .edit {
+                if let viewModel = coordinator.editViewModel {
+                    EditScreen(viewModel: viewModel)
+                } else {
+                    portfolioContent
+                }
             }
         }
         .onAppear {

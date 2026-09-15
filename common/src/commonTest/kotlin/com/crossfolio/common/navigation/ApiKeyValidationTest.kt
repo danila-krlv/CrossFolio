@@ -197,6 +197,25 @@ class ApiKeyValidationTest {
     }
 
     @Test
+    fun deletingKeyFromProfileResetsOpenEditWithoutChangingSelectedTab() {
+        val f = Fixture()
+        f.valid(0)
+        val portfolio = f.tabs.portfolioCoordinator
+        portfolio.openAssetSearch()
+        portfolio.assetSearchViewModel.selectAsset(Asset("1", "BTC", name = "Bitcoin"))
+        assertEquals(PortfolioRoute.EDIT, portfolio.state.value.currentRoute)
+        assertTrue(portfolio.editViewModel != null)
+
+        f.tabs.selectTab(AppTab.PROFILE)
+        f.profile.setCoinMarketCapApiKey("")
+
+        assertEquals(AppTab.PROFILE, f.tabs.state.value.selectedTab)
+        assertEquals(PortfolioRoute.PORTFOLIO, portfolio.state.value.currentRoute)
+        assertNull(portfolio.editViewModel)
+        assertFalse(portfolio.state.value.isSearchEnabled)
+    }
+
+    @Test
     fun candidateNetworkErrorRetainsStorageAndFocusAloneDoesNotRecheckValidKey() {
         val f = Fixture()
         f.valid(0)
