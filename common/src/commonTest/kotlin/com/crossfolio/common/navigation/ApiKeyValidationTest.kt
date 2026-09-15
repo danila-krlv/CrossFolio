@@ -1,9 +1,8 @@
 package com.crossfolio.common.navigation
 
 import com.crossfolio.common.core.asset.Asset
-import com.crossfolio.common.core.network.ApiKeyManager
+import com.crossfolio.common.core.network.ApiKeyInteractor
 import com.crossfolio.common.core.network.ApiKeyValidationStatus
-import com.crossfolio.common.core.network.ApiKeyValidator
 import com.crossfolio.common.core.network.NetworkFailure
 import com.crossfolio.common.core.asset.AssetCatalog
 import com.crossfolio.common.core.network.ApiKeyValidation
@@ -27,11 +26,11 @@ class ApiKeyValidationTest {
         portfolio.openAssetSearch()
         f.profile.setCoinMarketCapApiKey("new-placeholder")
         f.network.catalogs[0](NetworkResult(null, "Invalid old key", NetworkFailure.INVALID_KEY))
-        assertEquals(ApiKeyValidationStatus.CHECKING, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.CHECKING, f.interactor.state.value.status)
         assertNull(f.tabs.state.value.alertMessage)
         f.valid(1)
         assertEquals("new-placeholder", f.storage.coinMarketCapApiKey)
-        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.VALID, f.interactor.state.value.status)
         assertTrue(portfolio.state.value.isSearchEnabled)
     }
 
@@ -44,7 +43,7 @@ class ApiKeyValidationTest {
         f.profile.finishApiKeyEditing()
         assertEquals(listOf("saved-placeholder", "saved-placeholder"), f.network.keys)
         f.valid(1)
-        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.VALID, f.interactor.state.value.status)
         assertTrue(f.tabs.portfolioCoordinator.state.value.isSearchEnabled)
         assertEquals(0, f.storage.writes)
     }
@@ -56,7 +55,7 @@ class ApiKeyValidationTest {
         val portfolio = f.tabs.portfolioCoordinator
         portfolio.openAssetSearch()
         f.network.catalogs[0](NetworkResult(null, "Invalid key", NetworkFailure.INVALID_KEY))
-        assertEquals(ApiKeyValidationStatus.INVALID, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.INVALID, f.interactor.state.value.status)
         assertEquals(PortfolioRoute.PORTFOLIO, portfolio.state.value.currentRoute)
         assertFalse(portfolio.state.value.isSearchEnabled)
         assertEquals(1, f.network.keys.size)
@@ -70,9 +69,9 @@ class ApiKeyValidationTest {
         assertEquals(listOf("saved-placeholder", "saved-placeholder"), f.network.keys)
         f.invalid(0)
         assertNull(f.tabs.state.value.alertMessage)
-        assertEquals(ApiKeyValidationStatus.CHECKING, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.CHECKING, f.interactor.state.value.status)
         f.valid(1)
-        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.VALID, f.interactor.state.value.status)
         assertEquals(0, f.storage.writes)
     }
 
@@ -93,7 +92,7 @@ class ApiKeyValidationTest {
         f.valid(1)
         assertEquals("latest-placeholder", f.storage.coinMarketCapApiKey)
         assertEquals(1, f.storage.writes)
-        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.VALID, f.interactor.state.value.status)
         assertTrue(f.profile.state.value.hasApiKey)
         assertFalse(f.tabs.state.value.toString().contains("latest-placeholder"))
     }
@@ -143,7 +142,7 @@ class ApiKeyValidationTest {
         f.valid(2)
         assertEquals("saved-placeholder", f.storage.coinMarketCapApiKey)
         assertEquals(0, f.storage.writes)
-        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.VALID, f.interactor.state.value.status)
         assertEquals("Новый API-ключ недействителен. Сохранён прежний ключ.", f.tabs.state.value.alertMessage)
     }
 
@@ -158,12 +157,12 @@ class ApiKeyValidationTest {
             if (failure == NetworkFailure.INVALID_KEY) {
                 assertEquals("", f.storage.coinMarketCapApiKey)
                 assertEquals(1, f.storage.writes)
-                assertEquals(ApiKeyValidationStatus.MISSING, f.manager.state.value.status)
+                assertEquals(ApiKeyValidationStatus.MISSING, f.interactor.state.value.status)
                 assertFalse(f.profile.state.value.hasApiKey)
             } else {
                 assertEquals("saved-placeholder", f.storage.coinMarketCapApiKey)
                 assertEquals(0, f.storage.writes)
-                assertEquals(ApiKeyValidationStatus.CHECK_FAILED, f.manager.state.value.status)
+                assertEquals(ApiKeyValidationStatus.CHECK_FAILED, f.interactor.state.value.status)
             }
             assertFalse(f.tabs.portfolioCoordinator.state.value.isSearchEnabled)
             assertTrue(f.tabs.state.value.alertMessage != null)
@@ -179,7 +178,7 @@ class ApiKeyValidationTest {
         f.timer.advance(5_000)
         assertEquals("", f.storage.coinMarketCapApiKey)
         assertEquals(1, f.network.keys.size)
-        assertEquals(ApiKeyValidationStatus.MISSING, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.MISSING, f.interactor.state.value.status)
         assertFalse(f.profile.state.value.hasApiKey)
     }
 
@@ -193,7 +192,7 @@ class ApiKeyValidationTest {
         f.profile.setCoinMarketCapApiKey("new-placeholder")
         f.network.validations[1](NetworkResult(null, "Network request failed", NetworkFailure.TRANSPORT))
         assertEquals(0, f.storage.writes)
-        assertEquals(ApiKeyValidationStatus.CHECK_FAILED, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.CHECK_FAILED, f.interactor.state.value.status)
         assertEquals("Не удалось проверить API-ключ. Проверьте подключение к интернету.", f.tabs.state.value.alertMessage)
         f.profile.beginApiKeyEditing()
         assertNull(f.tabs.state.value.alertMessage)
@@ -236,20 +235,20 @@ class ApiKeyValidationTest {
         f.timer.advance(5_000)
         f.valid(1)
         f.network.catalogs[0](NetworkResult(null, "Old error", NetworkFailure.INVALID_KEY))
-        assertEquals(ApiKeyValidationStatus.VALID, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.VALID, f.interactor.state.value.status)
         assertNull(f.tabs.state.value.alertMessage)
     }
 
     @Test
     fun missingStartupAndStorageWriteFailureNeverEnableSearch() {
         val f = Fixture("")
-        assertEquals(ApiKeyValidationStatus.MISSING, f.manager.state.value.status)
+        assertEquals(ApiKeyValidationStatus.MISSING, f.interactor.state.value.status)
         assertEquals(0, f.network.keys.size)
         f.storage.rejectWrites = true
         f.profile.setCoinMarketCapApiKey("new-placeholder")
         f.valid(0)
-        assertEquals(ApiKeyValidationStatus.CHECK_FAILED, f.manager.state.value.status)
-        assertEquals(NetworkFailure.STORAGE, f.manager.state.value.failure)
+        assertEquals(ApiKeyValidationStatus.CHECK_FAILED, f.interactor.state.value.status)
+        assertEquals(NetworkFailure.STORAGE, f.interactor.state.value.failure)
         assertFalse(f.tabs.portfolioCoordinator.state.value.isSearchEnabled)
         assertFalse(f.profile.state.value.hasApiKey)
     }
@@ -259,9 +258,9 @@ private class Fixture(initialKey: String = "saved-placeholder") {
     val storage = FakeStorage(initialKey)
     val network = FakeNetwork()
     val timer = ManualTimer()
-    val manager = ApiKeyManager(storage, ApiKeyValidator(network))
-    val profile = ProfileViewModel(null, manager, timer::schedule)
-    val tabs = TabBarCoordinator(PortfolioCoordinator(network), profileViewModel = profile, apiKeyManager = manager)
+    val interactor = ApiKeyInteractor(storage, network)
+    val profile = ProfileViewModel(null, interactor, timer::schedule)
+    val tabs = TabBarCoordinator(PortfolioCoordinator(network), profileViewModel = profile, apiKeyInteractor = interactor)
     fun valid(index: Int) { network.validations[index](NetworkResult(true, null)) }
     fun invalid(index: Int) { network.validations[index](NetworkResult(null, "Invalid key", NetworkFailure.INVALID_KEY)) }
 }

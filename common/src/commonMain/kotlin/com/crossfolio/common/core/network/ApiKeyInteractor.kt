@@ -8,11 +8,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ApiKeyManager(
+class ApiKeyInteractor(
     private val secureStorage: ProfileSecureStorage?,
-    private val validator: ApiKeyValidator,
+    private val validation: ApiKeyValidation,
 ) {
-    constructor() : this(null, ApiKeyValidator { _, completion ->
+    constructor() : this(null, ApiKeyValidation { _, completion ->
         completion(NetworkResult(null, "Network manager is unavailable", NetworkFailure.TRANSPORT))
     })
 
@@ -58,8 +58,8 @@ class ApiKeyManager(
             return
         }
         publish(ApiKeyValidationState(ApiKeyValidationStatus.CHECKING))
-        validator.check(candidate) { result ->
-            if (request != generation) return@check
+        validation.validateApiKey(candidate) { result ->
+            if (request != generation) return@validateApiKey
             when {
                 result.value == true -> {
                     if (save(candidate)) publish(ApiKeyValidationState(ApiKeyValidationStatus.VALID))
@@ -85,8 +85,8 @@ class ApiKeyManager(
             return
         }
         publish(ApiKeyValidationState(ApiKeyValidationStatus.CHECKING))
-        validator.check(key) { result ->
-            if (request != generation) return@check
+        validation.validateApiKey(key) { result ->
+            if (request != generation) return@validateApiKey
             when {
                 result.value == true -> publish(ApiKeyValidationState(ApiKeyValidationStatus.VALID,
                     inputFailure = inputFailure))

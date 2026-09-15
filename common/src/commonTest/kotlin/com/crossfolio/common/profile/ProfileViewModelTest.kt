@@ -1,7 +1,7 @@
 package com.crossfolio.common.profile
 
-import com.crossfolio.common.core.network.ApiKeyManager
-import com.crossfolio.common.core.network.ApiKeyValidator
+import com.crossfolio.common.core.network.ApiKeyInteractor
+import com.crossfolio.common.core.network.ApiKeyValidation
 import com.crossfolio.common.core.network.NetworkResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -104,5 +104,5 @@ private class FakeSecureStorage(
 
 private fun profile(preferencesStorage: ProfilePreferencesStorage? = null,
     secureStorage: ProfileSecureStorage? = null) = ProfileViewModel(preferencesStorage,
-    ApiKeyManager(secureStorage, ApiKeyValidator { _, completion -> completion(NetworkResult(true, null)) }),
+    ApiKeyInteractor(secureStorage, ApiKeyValidation { _, completion -> completion(NetworkResult(true, null)) }),
     { _, _ -> {} })

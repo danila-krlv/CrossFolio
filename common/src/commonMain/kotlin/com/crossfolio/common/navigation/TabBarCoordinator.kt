@@ -1,7 +1,7 @@
 package com.crossfolio.common.navigation
 
 import com.crossfolio.common.analytics.AnalyticsViewModel
-import com.crossfolio.common.core.network.ApiKeyManager
+import com.crossfolio.common.core.network.ApiKeyInteractor
 import com.crossfolio.common.core.network.ApiKeyValidationState
 import com.crossfolio.common.core.network.ApiKeyValidationStatus
 import com.crossfolio.common.core.network.NetworkFailure
@@ -30,16 +30,16 @@ class TabBarCoordinator(
     val portfolioCoordinator: PortfolioCoordinator = PortfolioCoordinator(),
     val analyticsViewModel: AnalyticsViewModel = AnalyticsViewModel(),
     val profileViewModel: ProfileViewModel = ProfileViewModel(),
-    val apiKeyManager: ApiKeyManager = profileViewModel.apiKeyManager,
+    val apiKeyInteractor: ApiKeyInteractor = profileViewModel.apiKeyInteractor,
 ) {
     private val _state = MutableStateFlow(TabBarState())
     val state: StateFlow<TabBarState> = _state.asStateFlow()
 
     init {
-        apiKeyManager.onStateChanged = ::onValidationChanged
+        apiKeyInteractor.onStateChanged = ::onValidationChanged
         portfolioCoordinator.onNetworkFailure = ::onNetworkFailure
         profileViewModel.onApiKeyChanged = ::resetNavigation
-        apiKeyManager.start()
+        apiKeyInteractor.start()
     }
 
     fun resetNavigation() {
@@ -79,11 +79,11 @@ class TabBarCoordinator(
     }
 
     private fun onNetworkFailure(failure: NetworkFailure?) {
-        if (apiKeyManager.state.value.isEditing) return
+        if (apiKeyInteractor.state.value.isEditing) return
         if (failure == NetworkFailure.INVALID_KEY) {
             // A catalog response for the saved key must not supersede an active key validation.
-            if (apiKeyManager.state.value.status == ApiKeyValidationStatus.CHECKING) return
-            apiKeyManager.rejectKey()
+            if (apiKeyInteractor.state.value.status == ApiKeyValidationStatus.CHECKING) return
+            apiKeyInteractor.rejectKey()
             portfolioCoordinator.resetNavigation()
         } else {
             _state.value = _state.value.copy(alertMessage = failureMessage(failure, checkingKey = false))

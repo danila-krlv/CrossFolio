@@ -15,13 +15,3 @@ data class ApiKeyValidationState(
     val isEditing: Boolean = false,
     val inputFailure: NetworkFailure? = null,
 )
-
-class ApiKeyValidator(
-    private val validate: (String, (NetworkResult<Boolean>) -> Unit) -> Unit,
-) {
-    constructor(validation: ApiKeyValidation) : this(validation::validateApiKey)
-
-    fun check(apiKey: String, completion: (NetworkResult<Boolean>) -> Unit) {
-        validate(apiKey, completion)
-    }
-}

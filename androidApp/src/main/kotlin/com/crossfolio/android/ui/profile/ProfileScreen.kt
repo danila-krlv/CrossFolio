@@ -42,7 +42,7 @@ import com.crossfolio.common.profile.ProfileViewModel
 fun ProfileScreen(viewModel: ProfileViewModel) {
     val state by viewModel.state.collectAsState()
     var apiKey by remember(viewModel) { mutableStateOf(viewModel.getCoinMarketCapApiKey()) }
-    val keyValidation by viewModel.apiKeyManager.state.collectAsState()
+    val keyValidation by viewModel.apiKeyInteractor.state.collectAsState()
     LaunchedEffect(keyValidation.status, keyValidation.isEditing) {
         if (!keyValidation.isEditing && keyValidation.status in listOf(
                 ApiKeyValidationStatus.VALID, ApiKeyValidationStatus.MISSING)) {

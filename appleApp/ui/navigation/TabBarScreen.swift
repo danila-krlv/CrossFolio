@@ -20,13 +20,13 @@ struct TabBarScreen: View {
     private static func makeCoordinator() -> TabBarCoordinator {
         let secureStorage = AppleProfileSecureStorage()
         let transport = NetworkManager()
-        let manager = ApiKeyManager(secureStorage: secureStorage,
-            validator: ApiKeyValidator(validation: CoinMarketCapClient(transport: transport, apiKeyProvider: { "" })))
+        let interactor = ApiKeyInteractor(secureStorage: secureStorage,
+            validation: CoinMarketCapClient(transport: transport, apiKeyProvider: { "" }))
         let client = CoinMarketCapClient(transport: transport, apiKeyProvider: {
-            manager.getSavedKey()
+            interactor.getSavedKey()
         })
         let profileViewModel = ProfileViewModel(
-            preferencesStorage: AppleProfilePreferencesStorage(), apiKeyManager: manager)
+            preferencesStorage: AppleProfilePreferencesStorage(), apiKeyInteractor: interactor)
         return TabBarCoordinator(
             portfolioCoordinator: PortfolioCoordinator(
                 assetCatalog: client,
@@ -36,7 +36,7 @@ struct TabBarScreen: View {
             ),
             analyticsViewModel: AnalyticsViewModel(),
             profileViewModel: profileViewModel,
-            apiKeyManager: manager
+            apiKeyInteractor: interactor
         )
     }
 

@@ -42,7 +42,7 @@ struct ProfileScreen: View {
         }
         .onAppear {
             stopObservingKey?()
-            stopObservingKey = viewModel.apiKeyManager.observeState { state in
+            stopObservingKey = viewModel.apiKeyInteractor.observeState { state in
                 if !state.isEditing && (state.status == .valid || state.status == .missing) {
                     coinMarketCapApiKey = viewModel.getCoinMarketCapApiKey()
                 }

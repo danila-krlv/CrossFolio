@@ -1,6 +1,6 @@
 package com.crossfolio.common.profile
 
-import com.crossfolio.common.core.network.ApiKeyManager
+import com.crossfolio.common.core.network.ApiKeyInteractor
 import com.crossfolio.common.core.network.ApiKeyValidationStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,11 +18,11 @@ data class ProfileState(
 
 class ProfileViewModel internal constructor(
     private val preferencesStorage: ProfilePreferencesStorage?,
-    val apiKeyManager: ApiKeyManager,
+    val apiKeyInteractor: ApiKeyInteractor,
     private val schedule: (Long, () -> Unit) -> (() -> Unit),
 ) {
-    constructor(preferencesStorage: ProfilePreferencesStorage?, apiKeyManager: ApiKeyManager) : this(
-        preferencesStorage, apiKeyManager, { milliseconds, action ->
+    constructor(preferencesStorage: ProfilePreferencesStorage?, apiKeyInteractor: ApiKeyInteractor) : this(
+        preferencesStorage, apiKeyInteractor, { milliseconds, action ->
             val job = CoroutineScope(Dispatchers.Main.immediate).launch {
                 delay(milliseconds)
                 action()
@@ -32,7 +32,7 @@ class ProfileViewModel internal constructor(
         },
     )
 
-    constructor() : this(null, ApiKeyManager())
+    constructor() : this(null, ApiKeyInteractor())
 
     internal var onApiKeyChanged: () -> Unit = {}
     private var apiKeyDraft: String? = null
@@ -49,7 +49,7 @@ class ProfileViewModel internal constructor(
     val state: StateFlow<ProfileState> = _state.asStateFlow()
 
     init {
-        apiKeyManager.onSavedKeyChanged = {
+        apiKeyInteractor.onSavedKeyChanged = {
             _state.value = _state.value.copy(hasApiKey = getCoinMarketCapApiKey().isNotEmpty())
             onApiKeyChanged()
         }
@@ -71,18 +71,18 @@ class ProfileViewModel internal constructor(
     }
 
     fun beginApiKeyEditing() {
-        if (apiKeyManager.state.value.isEditing) return
+        if (apiKeyInteractor.state.value.isEditing) return
         cancelTimer()
         apiKeyDraft = getCoinMarketCapApiKey()
         apiKeyDirty = false
-        apiKeyManager.suspendValidation()
+        apiKeyInteractor.suspendValidation()
     }
 
     fun editCoinMarketCapApiKey(apiKey: String) {
         cancelTimer()
         apiKeyDraft = apiKey
         apiKeyDirty = true
-        apiKeyManager.suspendValidation()
+        apiKeyInteractor.suspendValidation()
         cancelPending = schedule(5_000) { finishApiKeyEditing() }
     }
 
@@ -90,14 +90,14 @@ class ProfileViewModel internal constructor(
         val candidate = apiKeyDraft ?: return
         apiKeyDraft = null
         cancelTimer()
-        val status = apiKeyManager.state.value.status
+        val status = apiKeyInteractor.state.value.status
         if (!apiKeyDirty && status != ApiKeyValidationStatus.CHECKING &&
             status != ApiKeyValidationStatus.CHECK_FAILED) {
-            apiKeyManager.endEditing()
+            apiKeyInteractor.endEditing()
             return
         }
         apiKeyDirty = false
-        apiKeyManager.applyCandidate(candidate)
+        apiKeyInteractor.applyCandidate(candidate)
     }
 
     private fun cancelTimer() {
@@ -105,5 +105,5 @@ class ProfileViewModel internal constructor(
         cancelPending = null
     }
 
-    fun getCoinMarketCapApiKey(): String = apiKeyManager.getSavedKey()
+    fun getCoinMarketCapApiKey(): String = apiKeyInteractor.getSavedKey()
 }
