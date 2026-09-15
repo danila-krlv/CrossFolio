@@ -45,7 +45,7 @@ struct AssetSearchScreen: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .onAppear { viewModel.loadLogo(id: asset.searchId) }
+                    .onAppear { viewModel.loadLogo(asset: asset) }
                 }
                 .listStyle(.plain)
             }

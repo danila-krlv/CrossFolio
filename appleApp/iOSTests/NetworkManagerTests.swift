@@ -108,7 +108,7 @@ final class NetworkManagerTests: XCTestCase {
 
     @MainActor
     func testSearchObservationReceivesAsyncUpdatesAndCancels() {
-        let model = AssetSearchViewModel(onBackRequested: {}, assetCatalog: nil, imageLoader: nil, onAssetSelected: { _ in }, onCatalogFailed: { _ in })
+        let model = AssetSearchViewModel(onBackRequested: {}, assetCatalog: nil, imageLoader: nil, onAssetSelected: { _ in }, onCatalogFailed: { _ in }, logoUrlProvider: { _ in nil })
         let received = expectation(description: "state received")
         let cancelled = expectation(description: "no updates after cancellation")
         cancelled.isInverted = true

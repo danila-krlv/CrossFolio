@@ -70,11 +70,11 @@ class ProfileViewModel internal constructor(
         finishApiKeyEditing()
     }
 
-    fun beginApiKeyEditing() {
+    fun beginApiKeyEditing(apiKey: String = getCoinMarketCapApiKey()) {
         if (apiKeyInteractor.state.value.isEditing) return
         cancelTimer()
-        apiKeyDraft = getCoinMarketCapApiKey()
-        apiKeyDirty = false
+        apiKeyDraft = apiKey
+        apiKeyDirty = apiKey.trim() != getCoinMarketCapApiKey()
         apiKeyInteractor.suspendValidation()
     }
 

@@ -36,7 +36,7 @@ struct ProfileScreen: View {
                     isApiKeyFocused = false
                 }
                 .onChange(of: isApiKeyFocused) { _, focused in
-                    if focused { viewModel.beginApiKeyEditing() }
+                    if focused { viewModel.beginApiKeyEditing(apiKey: coinMarketCapApiKey) }
                     else { viewModel.finishApiKeyEditing() }
                 }
         }

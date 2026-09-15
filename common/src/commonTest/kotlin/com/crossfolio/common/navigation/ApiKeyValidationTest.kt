@@ -35,6 +35,20 @@ class ApiKeyValidationTest {
     }
 
     @Test
+    fun visibleCandidateIsRetriedAfterNetworkFailure() {
+        val f = Fixture()
+        f.valid(0)
+        f.profile.setCoinMarketCapApiKey("new-placeholder")
+        f.network.validations[1](NetworkResult(null, "Offline", NetworkFailure.TRANSPORT))
+        f.profile.beginApiKeyEditing("new-placeholder")
+        f.profile.finishApiKeyEditing()
+        assertEquals(listOf("saved-placeholder", "new-placeholder", "new-placeholder"), f.network.keys)
+        f.valid(2)
+        assertEquals("new-placeholder", f.storage.coinMarketCapApiKey)
+        assertEquals(ApiKeyValidationStatus.VALID, f.interactor.state.value.status)
+    }
+
+    @Test
     fun unchangedInputRetriesAfterStartupNetworkFailureOnce() {
         val f = Fixture()
         f.network.validations[0](NetworkResult(null, "Offline", NetworkFailure.TRANSPORT))

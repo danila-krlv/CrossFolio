@@ -77,7 +77,7 @@ fun AssetSearchScreen(viewModel: AssetSearchViewModel) {
 
 @Composable
 private fun AssetRow(asset: Asset, logoUrl: String?, viewModel: AssetSearchViewModel) {
-    LaunchedEffect(asset.searchId) { viewModel.loadLogo(asset.searchId) }
+    LaunchedEffect(asset.searchId) { viewModel.loadLogo(asset) }
     val image by produceState<ImageBitmap?>(null, logoUrl, viewModel) {
         value = null
         val url = logoUrl ?: return@produceState

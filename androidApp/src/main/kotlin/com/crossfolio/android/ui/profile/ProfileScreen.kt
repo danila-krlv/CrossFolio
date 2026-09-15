@@ -98,7 +98,7 @@ fun ProfileScreen(viewModel: ProfileViewModel) {
             },
             modifier = Modifier.fillMaxWidth()
                 .onFocusChanged {
-                    if (it.isFocused) viewModel.beginApiKeyEditing() else viewModel.finishApiKeyEditing()
+                    if (it.isFocused) viewModel.beginApiKeyEditing(apiKey) else viewModel.finishApiKeyEditing()
                 }
                 .onKeyEvent {
                     if (it.key == Key.Enter && it.type == KeyEventType.KeyUp) {

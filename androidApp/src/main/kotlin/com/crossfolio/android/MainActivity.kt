@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
             portfolioCoordinator = PortfolioCoordinator(
                 assetCatalog = client,
                 imageLoader = client::fetchImg,
+                logoUrlProvider = client::logoUrl,
             ),
             profileViewModel = profileViewModel,
             apiKeyInteractor = interactor,

@@ -75,7 +75,7 @@ class EditViewModel(
         val position = if (quantity.isSuccess && price.isSuccess && commission.isSuccess && dateError == null) {
             val operation = PortfolioOperation(operationId, PortfolioOperationDirection.ADDITION,
                 quantity.getOrThrow(), input.occurredAtEpochMillis, price.getOrThrow(), commission.getOrThrow())
-            PortfolioPosition(asset, latestQuote = quote).record(operation, now, rules)
+            PortfolioPosition(asset, latestQuote = quote).record(operation, now, rules.operationRules)
         } else null
         _state.value = input.copy(
             quantity = input.quantity.copy(error = quantity.exceptionOrNull()?.message),

@@ -3,7 +3,6 @@ package com.crossfolio.common.portfolio.model
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.decimal.DecimalValue
 import com.crossfolio.common.core.market.AssetQuote
-import com.crossfolio.common.portfolio.edit.AssetFieldRules
 
 /** History is in recording order, not event-date order; past-date balances are not checked. */
 class PortfolioPosition(
@@ -17,7 +16,7 @@ class PortfolioPosition(
     fun record(
         operation: PortfolioOperation,
         nowEpochMillis: Long,
-        rules: AssetFieldRules = AssetFieldRules(),
+        rules: PortfolioOperationRules = PortfolioOperationRules(),
     ): PortfolioPosition {
         rules.validate(operation, quantity, nowEpochMillis)
         return PortfolioPosition(asset, operations + operation, latestQuote)

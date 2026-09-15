@@ -32,7 +32,8 @@ struct TabBarScreen: View {
                 assetCatalog: client,
                 imageLoader: { url, completion in
                     client.fetchImg(url: url) { result in _ = completion(result) }
-                }
+                },
+                logoUrlProvider: { asset in client.logoUrl(asset: asset) }
             ),
             analyticsViewModel: AnalyticsViewModel(),
             profileViewModel: profileViewModel,

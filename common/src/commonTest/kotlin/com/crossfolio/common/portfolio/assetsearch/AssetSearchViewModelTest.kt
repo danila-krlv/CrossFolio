@@ -115,18 +115,23 @@ class AssetSearchViewModelTest {
     }
 
     @Test
-    fun generatesAndCachesPublicLogoAddressWithoutMetadataRequests() {
+    fun cachesLogoAddressFromInjectedProvider() {
         val network = FakeNetwork()
-        val model = model(network)
-        model.loadCatalog()
-        model.loadLogo("1027")
-        val state = model.state.value
-        model.loadLogo("1027")
-        for (id in listOf("", "../1", "1?key=x", "ETH")) model.loadLogo(id)
-        assertEquals(state, model.state.value)
-        assertEquals(mapOf("1027" to "https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png"),
-            model.state.value.logoUrls)
-        assertEquals(1, network.mapRequests)
+        var requests = 0
+        val asset = Asset("external-id", "ETH")
+        val model = PortfolioCoordinator(network, logoUrlProvider = {
+            requests++
+            assertEquals(asset, it)
+            "https://example.com/logo.png"
+        }).assetSearchViewModel
+        model.loadLogo(asset)
+        model.loadLogo(asset)
+        assertEquals(mapOf("external-id" to "https://example.com/logo.png"), model.state.value.logoUrls)
+        assertEquals(1, requests)
+        assertEquals(0, network.mapRequests)
+        val missing = AssetSearchViewModel({})
+        missing.loadLogo(asset)
+        assertTrue(missing.state.value.logoUrls.isEmpty())
     }
 
     @Test

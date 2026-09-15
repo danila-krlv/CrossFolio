@@ -2,6 +2,7 @@ package com.crossfolio.common.core.network
 
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.asset.AssetCatalog
+import com.crossfolio.common.core.asset.SearchPlatform
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -48,6 +49,13 @@ class CoinMarketCapClient(
                     .jsonObject.getValue("price").jsonPrimitive.double.also { price -> require(price.isFinite()) }
             }
         }, completion)
+    }
+
+    fun logoUrl(asset: Asset): String? {
+        val id = asset.searchId
+        if (asset.searchPlatform != SearchPlatform.COIN_MARKET_CAP ||
+            id.isEmpty() || !id.all { it in '0'..'9' }) return null
+        return "https://s2.coinmarketcap.com/static/img/coins/64x64/$id.png"
     }
 
     fun fetchImg(url: String, completion: (NetworkResult<ByteArray>) -> Unit) {

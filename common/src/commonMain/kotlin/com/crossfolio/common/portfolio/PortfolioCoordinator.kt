@@ -34,6 +34,7 @@ data class PortfolioNavigationState(
 class PortfolioCoordinator(
     assetCatalog: AssetCatalog? = null,
     imageLoader: ((String, (NetworkResult<ByteArray>) -> Unit) -> Unit)? = null,
+    logoUrlProvider: (Asset) -> String? = { null },
 ) {
     private val _state = MutableStateFlow(PortfolioNavigationState())
     val state: StateFlow<PortfolioNavigationState> = _state.asStateFlow()
@@ -47,6 +48,7 @@ class PortfolioCoordinator(
         onBackRequested = ::navigateBack,
         assetCatalog = assetCatalog,
         imageLoader = imageLoader,
+        logoUrlProvider = logoUrlProvider,
         onAssetSelected = ::openEdit,
         onCatalogFailed = { onNetworkFailure(it) },
     )

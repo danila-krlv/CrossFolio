@@ -1,5 +1,6 @@
 package com.crossfolio.common.portfolio.assetsearch
 
+import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.network.CoinMarketCapClient
 import com.crossfolio.common.core.network.HttpRequest
 import com.crossfolio.common.core.network.HttpResponse
@@ -13,6 +14,18 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CoinMarketCapClientTest {
+    @Test
+    fun buildsPublicLogoUrlWithoutTransportOrApiKey() {
+        val transport = FakeTransport()
+        val client = CoinMarketCapClient(transport) { error("Must not read key") }
+        assertEquals("https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png",
+            client.logoUrl(Asset("1027", "ETH")))
+        for (id in listOf("", "../1", "1?key=x", "ETH")) {
+            assertNull(client.logoUrl(Asset(id, "ETH")))
+        }
+        assertTrue(transport.requests.isEmpty())
+    }
+
     @Test
     fun validatesDraftWithoutReadingOrSavingCurrentKey() {
         val transport = FakeTransport()

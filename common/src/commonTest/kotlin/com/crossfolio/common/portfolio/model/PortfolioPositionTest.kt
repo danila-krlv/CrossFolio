@@ -2,7 +2,6 @@ package com.crossfolio.common.portfolio.model
 
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.decimal.DecimalValue
-import com.crossfolio.common.portfolio.edit.AssetFieldRules
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -48,7 +47,7 @@ class PortfolioPositionTest {
         }
         assertFailsWith<IllegalArgumentException> { addition("0") }
         assertFailsWith<IllegalArgumentException> {
-            AssetFieldRules(quantityFractionDigits = 0).validate(addition("0.1"), DecimalValue.ZERO, 1000)
+            PortfolioOperationRules(quantityFractionDigits = 0).validate(addition("0.1"), DecimalValue.ZERO, 1000)
         }
         assertEquals(DecimalValue("10000000"), position.record(addition("10000000"), 1000).quantity)
     }
