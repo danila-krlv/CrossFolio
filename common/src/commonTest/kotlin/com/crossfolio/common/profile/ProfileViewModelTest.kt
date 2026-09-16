@@ -1,5 +1,8 @@
 package com.crossfolio.common.profile
 
+import com.crossfolio.common.core.network.ApiKeyInteractor
+import com.crossfolio.common.core.network.ApiKeyValidation
+import com.crossfolio.common.core.network.NetworkResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -8,7 +11,7 @@ import kotlin.test.assertTrue
 class ProfileViewModelTest {
     @Test
     fun notifiesOnlyAfterStoredKeyChanges() {
-        val model = ProfileViewModel()
+        val model = profile()
         var changes = 0
         model.onApiKeyChanged = { changes++ }
         model.setCoinMarketCapApiKey("placeholder")
@@ -26,7 +29,7 @@ class ProfileViewModelTest {
                 get() = ""
                 set(value) {}
         }
-        val viewModel = ProfileViewModel(null, storage)
+        val viewModel = profile(secureStorage = storage)
         viewModel.setCoinMarketCapApiKey("rejected-placeholder")
         assertFalse(viewModel.state.value.hasApiKey)
         assertEquals("", viewModel.getCoinMarketCapApiKey())
@@ -35,7 +38,7 @@ class ProfileViewModelTest {
 
     @Test
     fun updatesStateWithoutPlatformStorages() {
-        val viewModel = ProfileViewModel()
+        val viewModel = profile()
 
         viewModel.setUserName("Danila")
         viewModel.setTheme(AppTheme.DARK)
@@ -62,7 +65,7 @@ class ProfileViewModelTest {
             theme = AppTheme.DARK,
         )
         val secureStorage = FakeSecureStorage(coinMarketCapApiKey = "initial-key")
-        val viewModel = ProfileViewModel(preferencesStorage, secureStorage)
+        val viewModel = profile(preferencesStorage, secureStorage)
 
         assertEquals("Danila", viewModel.state.value.userName)
         assertEquals(AppTheme.DARK, viewModel.state.value.theme)
@@ -98,3 +101,8 @@ private class FakePreferencesStorage(
 private class FakeSecureStorage(
     override var coinMarketCapApiKey: String,
 ) : ProfileSecureStorage
+
+private fun profile(preferencesStorage: ProfilePreferencesStorage? = null,
+    secureStorage: ProfileSecureStorage? = null) = ProfileViewModel(preferencesStorage,
+    ApiKeyInteractor(secureStorage, ApiKeyValidation { _, completion -> completion(NetworkResult(true, null)) }),
+    { _, _ -> {} })

@@ -1,7 +1,12 @@
 package com.crossfolio.common.portfolio
 
-import com.crossfolio.common.assetsearch.AssetSearchViewModel
-import com.crossfolio.common.assetsearch.NetworkProtocol
+import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.core.network.NetworkFailure
+import com.crossfolio.common.core.asset.AssetCatalog
+import com.crossfolio.common.core.network.NetworkResult
+import com.crossfolio.common.portfolio.assetsearch.AssetSearchViewModel
+import com.crossfolio.common.portfolio.edit.EditViewModel
+import com.crossfolio.common.portfolio.overview.PortfolioViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,11 +17,12 @@ import kotlinx.coroutines.launch
 enum class PortfolioRoute {
     PORTFOLIO,
     ASSET_SEARCH,
+    EDIT,
 }
 
 data class PortfolioNavigationState(
     val backStack: List<PortfolioRoute> = listOf(PortfolioRoute.PORTFOLIO),
-    val alertMessage: String? = null,
+    val isSearchEnabled: Boolean = false,
 ) {
     init {
         require(backStack.isNotEmpty()) { "Portfolio navigation stack must not be empty" }
@@ -26,63 +32,44 @@ data class PortfolioNavigationState(
 }
 
 class PortfolioCoordinator(
-    networkManager: NetworkProtocol? = null,
-    apiKeyProvider: (() -> String)? = null,
+    assetCatalog: AssetCatalog? = null,
+    imageLoader: ((String, (NetworkResult<ByteArray>) -> Unit) -> Unit)? = null,
+    logoUrlProvider: (Asset) -> String? = { null },
 ) {
     private val _state = MutableStateFlow(PortfolioNavigationState())
     val state: StateFlow<PortfolioNavigationState> = _state.asStateFlow()
+    var editViewModel: EditViewModel? = null
+        private set
 
     val portfolioViewModel = PortfolioViewModel(
         onAssetSearchRequested = ::openAssetSearch,
     )
     val assetSearchViewModel = AssetSearchViewModel(
         onBackRequested = ::navigateBack,
-        networkManager = networkManager,
-        apiKeyProvider = apiKeyProvider,
+        assetCatalog = assetCatalog,
+        imageLoader = imageLoader,
+        logoUrlProvider = logoUrlProvider,
+        onAssetSelected = ::openEdit,
+        onCatalogFailed = { onNetworkFailure(it) },
     )
 
-    private var navigationVersion = 0
+    internal var onNetworkFailure: (NetworkFailure?) -> Unit = {}
 
-    init {
-        val version = navigationVersion
-        assetSearchViewModel.openSearch { valid ->
-            if (version != navigationVersion) return@openSearch
-            if (!valid) showValidationAlert()
-        }
+    internal fun setSearchEnabled(enabled: Boolean) {
+        _state.value = _state.value.copy(isSearchEnabled = enabled)
     }
 
     fun resetNavigation() {
-        navigationVersion++
-        _state.value = PortfolioNavigationState()
+        editViewModel = null
+        assetSearchViewModel.resetCatalog()
+        _state.value = PortfolioNavigationState(isSearchEnabled = _state.value.isSearchEnabled)
     }
 
     fun openAssetSearch() {
-        val version = ++navigationVersion
-        _state.value = _state.value.copy(backStack = listOf(PortfolioRoute.PORTFOLIO), alertMessage = null)
-        assetSearchViewModel.openSearch { valid ->
-            if (version != navigationVersion) return@openSearch
-            if (valid) {
-                _state.value = _state.value.copy(
-                    backStack = listOf(PortfolioRoute.PORTFOLIO, PortfolioRoute.ASSET_SEARCH),
-                    alertMessage = null,
-                )
-            } else {
-                showValidationAlert()
-            }
-        }
-    }
-
-    fun dismissAlert() {
-        _state.value = _state.value.copy(alertMessage = null)
-    }
-
-    private fun showValidationAlert() {
-        val message = if (assetSearchViewModel.state.value.isApiKeyInvalid) {
-            "Добавьте действительный API-ключ CoinMarketCap в профиле."
-        } else {
-            "Не удалось проверить API-ключ. Проверьте подключение к интернету и повторите попытку."
-        }
-        _state.value = _state.value.copy(alertMessage = message)
+        if (!_state.value.isSearchEnabled) return
+        editViewModel = null
+        _state.value = _state.value.copy(backStack = listOf(PortfolioRoute.PORTFOLIO, PortfolioRoute.ASSET_SEARCH))
+        assetSearchViewModel.loadCatalog()
     }
 
     fun observeState(observer: (PortfolioNavigationState) -> Unit): () -> Unit {
@@ -92,12 +79,17 @@ class PortfolioCoordinator(
         return { job.cancel() }
     }
 
+    private fun openEdit(asset: Asset) {
+        if (!_state.value.isSearchEnabled || _state.value.currentRoute != PortfolioRoute.ASSET_SEARCH) return
+        editViewModel = EditViewModel(asset, ::navigateBack)
+        _state.value = _state.value.copy(backStack = _state.value.backStack + PortfolioRoute.EDIT)
+    }
+
     private fun navigateBack() {
         val backStack = _state.value.backStack
         if (backStack.size > 1) {
-            _state.value = PortfolioNavigationState(backStack = backStack.dropLast(1))
+            editViewModel = null
+            _state.value = _state.value.copy(backStack = backStack.dropLast(1))
         }
     }
-
-    // TODO: Add asset details and quantity editing routes.
 }

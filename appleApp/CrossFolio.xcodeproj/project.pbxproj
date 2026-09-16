@@ -29,6 +29,8 @@
 		100000000000000000000020 /* NetworkManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000016 /* NetworkManagerTests.swift */; };
 		100000000000000000000021 /* AssetSearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000017 /* AssetSearchScreen.swift */; };
 		100000000000000000000022 /* AssetSearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000017 /* AssetSearchScreen.swift */; };
+		100000000000000000000023 /* EditScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000018 /* EditScreen.swift */; };
+		100000000000000000000024 /* EditScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000018 /* EditScreen.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +61,7 @@
 		200000000000000000000015 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
 		200000000000000000000016 /* NetworkManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManagerTests.swift; sourceTree = "<group>"; };
 		200000000000000000000017 /* AssetSearchScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetSearchScreen.swift; sourceTree = "<group>"; };
+		200000000000000000000018 /* EditScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditScreen.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,12 +109,10 @@
 			children = (
 				200000000000000000000001 /* CrossFolioApp.swift */,
 				200000000000000000000002 /* ContentView.swift */,
-				200000000000000000000008 /* TabBarScreen.swift */,
-				200000000000000000000009 /* PortfolioScreen.swift */,
-				200000000000000000000017 /* AssetSearchScreen.swift */,
-				200000000000000000000010 /* AnalyticsScreen.swift */,
-				200000000000000000000011 /* ProfileScreen.swift */,
-				200000000000000000000012 /* AppleProfileStorage.swift */,
+				400000000000000000000009 /* navigation */,
+				400000000000000000000010 /* portfolio */,
+				400000000000000000000013 /* analytics */,
+				400000000000000000000014 /* profile */,
 			);
 			path = ui;
 			sourceTree = "<group>";
@@ -163,6 +164,57 @@
 			isa = PBXGroup;
 			children = (200000000000000000000015 /* NetworkManager.swift */,);
 			path = network;
+			sourceTree = "<group>";
+		};
+		400000000000000000000009 /* navigation */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000008 /* TabBarScreen.swift */,
+			);
+			path = navigation;
+			sourceTree = "<group>";
+		};
+		400000000000000000000010 /* portfolio */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000009 /* PortfolioScreen.swift */,
+				400000000000000000000011 /* assetsearch */,
+				400000000000000000000012 /* edit */,
+			);
+			path = portfolio;
+			sourceTree = "<group>";
+		};
+		400000000000000000000011 /* assetsearch */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000017 /* AssetSearchScreen.swift */,
+			);
+			path = assetsearch;
+			sourceTree = "<group>";
+		};
+		400000000000000000000012 /* edit */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000018 /* EditScreen.swift */,
+			);
+			path = edit;
+			sourceTree = "<group>";
+		};
+		400000000000000000000013 /* analytics */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000010 /* AnalyticsScreen.swift */,
+			);
+			path = analytics;
+			sourceTree = "<group>";
+		};
+		400000000000000000000014 /* profile */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000011 /* ProfileScreen.swift */,
+				200000000000000000000012 /* AppleProfileStorage.swift */,
+			);
+			path = profile;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -339,6 +391,7 @@
 				100000000000000000000007 /* TabBarScreen.swift in Sources */,
 				100000000000000000000008 /* PortfolioScreen.swift in Sources */,
 				100000000000000000000021 /* AssetSearchScreen.swift in Sources */,
+				100000000000000000000023 /* EditScreen.swift in Sources */,
 				100000000000000000000009 /* AnalyticsScreen.swift in Sources */,
 				100000000000000000000010 /* ProfileScreen.swift in Sources */,
 				100000000000000000000015 /* AppleProfileStorage.swift in Sources */,
@@ -355,6 +408,7 @@
 				100000000000000000000011 /* TabBarScreen.swift in Sources */,
 				100000000000000000000012 /* PortfolioScreen.swift in Sources */,
 				100000000000000000000022 /* AssetSearchScreen.swift in Sources */,
+				100000000000000000000024 /* EditScreen.swift in Sources */,
 				100000000000000000000013 /* AnalyticsScreen.swift in Sources */,
 				100000000000000000000014 /* ProfileScreen.swift in Sources */,
 				100000000000000000000016 /* AppleProfileStorage.swift in Sources */,

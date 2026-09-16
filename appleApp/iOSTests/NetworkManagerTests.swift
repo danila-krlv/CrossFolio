@@ -23,22 +23,10 @@ final class NetworkManagerTests: XCTestCase {
         wait(for: [done], timeout: 3)
     }
 
-    func testMetadataQuotesAndImage() {
+    func testQuotesAndImage() {
         let manager = makeManager { "test-placeholder" }
-        let logo = expectation(description: "logo")
-        let logos = expectation(description: "logos")
         let prices = expectation(description: "prices")
         let image = expectation(description: "image")
-        manager.fetchLogoURL(id: "1") { result in
-            XCTAssertEqual(result.value as String?, "https://example.com/image")
-            XCTAssertNil(result.error)
-            logo.fulfill()
-        }
-        manager.fetchLogoUrlArray(idString: "1", idArray: ["1"]) { result in
-            XCTAssertEqual(result.value?["1"] as? String, "https://example.com/image")
-            XCTAssertNil(result.error)
-            logos.fulfill()
-        }
         manager.fetchPriceArray(idString: "1", idArray: ["1"]) { result in
             XCTAssertEqual((result.value?["1"] as? KotlinDouble)?.doubleValue, 12.5)
             XCTAssertNil(result.error)
@@ -50,21 +38,15 @@ final class NetworkManagerTests: XCTestCase {
             XCTAssertEqual(result.value?.get(index: 1), -1)
             image.fulfill()
         }
-        wait(for: [logo, logos, prices, image], timeout: 3)
+        wait(for: [prices, image], timeout: 3)
     }
 
     func testFailuresAreDeliveredOnMainThread() {
         let manager = makeManager { "test-placeholder" }
-        let missing = expectation(description: "missing metadata")
         let api = expectation(description: "API error")
         let malformed = expectation(description: "malformed response")
         let invalid = expectation(description: "invalid URL")
         let key = expectation(description: "empty key")
-        manager.fetchLogoUrlArray(idString: "1", idArray: ["missing"]) { result in
-            XCTAssertNil(result.value)
-            XCTAssertNotNil(result.error)
-            missing.fulfill()
-        }
         manager.fetchPriceArray(idString: "error", idArray: ["1"]) { result in
             XCTAssertTrue(Thread.isMainThread)
             XCTAssertEqual(result.error, "CoinMarketCap error 1001: API request rejected")
@@ -86,13 +68,13 @@ final class NetworkManagerTests: XCTestCase {
             XCTAssertEqual(result.error, "API key is unavailable")
             key.fulfill()
         }
-        wait(for: [missing, api, malformed, invalid, key], timeout: 3)
+        wait(for: [api, malformed, invalid, key], timeout: 3)
     }
 
-    private func makeManager(_ key: @escaping () -> String) -> NetworkManager {
+    private func makeManager(_ key: @escaping () -> String) -> CoinMarketCapClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [NetworkFixtureProtocol.self]
-        return NetworkManager(apiKeyProvider: key, session: URLSession(configuration: configuration))
+        return CoinMarketCapClient(transport: NetworkManager(session: URLSession(configuration: configuration)), apiKeyProvider: key)
     }
 
     func testHTTPCodeIsPreservedWhenErrorBodyHasNoStatus() {
@@ -126,7 +108,7 @@ final class NetworkManagerTests: XCTestCase {
 
     @MainActor
     func testSearchObservationReceivesAsyncUpdatesAndCancels() {
-        let model = AssetSearchViewModel(onBackRequested: {}, networkManager: nil, apiKeyProvider: nil)
+        let model = AssetSearchViewModel(onBackRequested: {}, assetCatalog: nil, imageLoader: nil, onAssetSelected: { _ in }, onCatalogFailed: { _ in }, logoUrlProvider: { _ in nil })
         let received = expectation(description: "state received")
         let cancelled = expectation(description: "no updates after cancellation")
         cancelled.isInverted = true
@@ -154,6 +136,7 @@ final class NetworkManagerTests: XCTestCase {
         var authenticated = URLRequest(url: source)
         authenticated.setValue("test-placeholder", forHTTPHeaderField: "X-CMC_PRO_API_KEY")
         let apiTask = session.dataTask(with: authenticated)
+        apiTask.taskDescription = "block-redirects"
         let imageTask = session.dataTask(with: URLRequest(url: source))
         defer { apiTask.cancel(); imageTask.cancel() }
         var callbacks = 0
