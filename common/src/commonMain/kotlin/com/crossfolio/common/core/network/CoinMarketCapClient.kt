@@ -3,6 +3,8 @@ package com.crossfolio.common.core.network
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.asset.AssetCatalog
 import com.crossfolio.common.core.asset.SearchPlatform
+import com.crossfolio.common.core.decimal.DecimalValue
+import com.crossfolio.common.core.market.MarketPriceSource
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -16,7 +18,7 @@ import kotlinx.serialization.json.long
 class CoinMarketCapClient(
     private val transport: HttpTransport,
     private val apiKeyProvider: () -> String,
-) : AssetCatalog, ApiKeyValidation {
+) : AssetCatalog, ApiKeyValidation, MarketPriceSource {
     override fun validateApiKey(apiKey: String, completion: (NetworkResult<Boolean>) -> Unit) {
         request("v1/key/info", { payload ->
             payload.getValue("data").jsonObject
@@ -48,6 +50,21 @@ class CoinMarketCapClient(
                 data.getValue(it).jsonObject.getValue("quote").jsonObject.getValue("USD")
                     .jsonObject.getValue("price").jsonPrimitive.double.also { price -> require(price.isFinite()) }
             }
+        }, completion)
+    }
+
+    override fun fetchMarketPrice(asset: Asset, completion: (NetworkResult<DecimalValue>) -> Unit) {
+        val id = asset.searchId
+        if (asset.searchPlatform != SearchPlatform.COIN_MARKET_CAP ||
+            id.isEmpty() || !id.all { it in '0'..'9' } || id.all { it == '0' }) {
+            completion(invalidResponse())
+            return
+        }
+        request("v2/cryptocurrency/quotes/latest?id=${encode(id)}&convert=USD", { payload ->
+            val price = payload.getValue("data").jsonObject.getValue(id).jsonObject
+                .getValue("quote").jsonObject.getValue("USD").jsonObject
+                .getValue("price").jsonPrimitive
+            DecimalValue.parse(price.content).also { require(!it.isZero) }
         }, completion)
     }
 

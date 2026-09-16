@@ -3,6 +3,7 @@ package com.crossfolio.common.portfolio
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.network.NetworkFailure
 import com.crossfolio.common.core.asset.AssetCatalog
+import com.crossfolio.common.core.market.MarketPriceSource
 import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.assetsearch.AssetSearchViewModel
 import com.crossfolio.common.portfolio.edit.EditViewModel
@@ -35,6 +36,7 @@ class PortfolioCoordinator(
     assetCatalog: AssetCatalog? = null,
     imageLoader: ((String, (NetworkResult<ByteArray>) -> Unit) -> Unit)? = null,
     logoUrlProvider: (Asset) -> String? = { null },
+    private val marketPriceSource: MarketPriceSource? = null,
 ) {
     private val _state = MutableStateFlow(PortfolioNavigationState())
     val state: StateFlow<PortfolioNavigationState> = _state.asStateFlow()
@@ -81,8 +83,14 @@ class PortfolioCoordinator(
 
     private fun openEdit(asset: Asset) {
         if (!_state.value.isSearchEnabled || _state.value.currentRoute != PortfolioRoute.ASSET_SEARCH) return
-        editViewModel = EditViewModel(asset, ::navigateBack)
+        editViewModel = EditViewModel(
+            asset,
+            ::navigateBack,
+            marketPriceSource = marketPriceSource,
+            onMarketPriceFailed = { onNetworkFailure(it) },
+        )
         _state.value = _state.value.copy(backStack = _state.value.backStack + PortfolioRoute.EDIT)
+        editViewModel?.fetchMarketPrice()
     }
 
     private fun navigateBack() {

@@ -3,6 +3,8 @@ package com.crossfolio.common.portfolio.edit
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.decimal.DecimalValue
 import com.crossfolio.common.core.market.AssetQuote
+import com.crossfolio.common.core.market.MarketPriceSource
+import com.crossfolio.common.core.network.NetworkFailure
 import com.crossfolio.common.portfolio.model.AcquisitionPrice
 import com.crossfolio.common.portfolio.model.AcquisitionPriceSource
 import com.crossfolio.common.portfolio.model.PortfolioOperation
@@ -33,7 +35,8 @@ data class EditState(
     val occurredAtEpochMillis: Long,
     val hasEditedDate: Boolean = false,
     val dateError: String? = null,
-    val marketPriceUsd: DecimalValue,
+    val marketPriceUsd: DecimalValue? = null,
+    val isMarketPriceLoading: Boolean = false,
     val position: PortfolioPosition? = null,
 ) {
     val canSave: Boolean get() = position != null
@@ -45,12 +48,13 @@ class EditViewModel(
     private val onBackRequested: () -> Unit,
     private val rules: AssetFieldRules = AssetFieldRules(),
     private val nowEpochMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    private val marketPriceSource: MarketPriceSource? = null,
+    private val onMarketPriceFailed: (NetworkFailure?) -> Unit = {},
 ) {
     private val operationId = Uuid.random().toString()
-    private val quote = AssetQuote(asset.identity, fetchMarketPrice(), nowEpochMillis())
+    private var quote: AssetQuote? = null
     private val _state = MutableStateFlow(EditState(
         occurredAtEpochMillis = nowEpochMillis() / 60_000 * 60_000,
-        marketPriceUsd = quote.priceUsd,
     ))
     val state: StateFlow<EditState> = _state.asStateFlow()
 
@@ -66,7 +70,10 @@ class EditViewModel(
     private fun update(input: EditState) {
         val quantity = runCatching { rules.parseQuantity(input.quantity.text) }
         val price = runCatching {
-            if (input.price.text.isBlank()) AcquisitionPrice(quote.priceUsd, AcquisitionPriceSource.MARKET)
+            if (input.price.text.isBlank()) AcquisitionPrice(
+                requireNotNull(quote?.priceUsd) { "Введите цену вручную" },
+                AcquisitionPriceSource.MARKET,
+            )
             else AcquisitionPrice(rules.parseManualPrice(input.price.text), AcquisitionPriceSource.MANUAL)
         }
         val commission = runCatching { rules.parseCommission(input.commission.text) }
@@ -85,9 +92,22 @@ class EditViewModel(
         )
     }
 
-    private fun fetchMarketPrice(): DecimalValue {
-        // TODO: Fetch a real market quote; 100 USD is a temporary UI placeholder.
-        return DecimalValue("100")
+    fun fetchMarketPrice() {
+        val source = marketPriceSource ?: return
+        if (quote != null || _state.value.isMarketPriceLoading) return
+        update(_state.value.copy(isMarketPriceLoading = true))
+        source.fetchMarketPrice(asset) { result ->
+            val price = result.value
+            if (price != null) {
+                quote = AssetQuote(asset.identity, price, nowEpochMillis())
+                update(_state.value.copy(marketPriceUsd = price, isMarketPriceLoading = false))
+            } else {
+                update(_state.value.copy(isMarketPriceLoading = false))
+                if (result.failure != NetworkFailure.STALE_RESPONSE) {
+                    onMarketPriceFailed(result.failure)
+                }
+            }
+        }
     }
 
     fun save() {

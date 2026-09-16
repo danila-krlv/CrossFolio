@@ -33,10 +33,20 @@ struct EditScreen: View {
                     }
                     decimalField("Цена приобретения, USD", field: state.price,
                                  id: .price,
-                                 hint: "Необязательно — используется \(state.marketPriceUsd.value) USD",
+                                 hint: state.marketPriceUsd.map {
+                                     "Необязательно — используется \($0.value) USD"
+                                 } ?? "Введите цену вручную — котировка недоступна",
                                  onChange: { viewModel.setPrice(text: $0) })
-                    Text("Котировка \(state.marketPriceUsd.value) USD — временная заглушка")
-                        .font(.caption).foregroundStyle(.secondary)
+                    if let marketPrice = state.marketPriceUsd {
+                        Text("Котировка \(marketPrice.value) USD")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else if state.isMarketPriceLoading {
+                        Text("Загрузка котировки…")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Text("Котировка недоступна")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     decimalField("Комиссия, USD", field: state.commission,
                                  id: .commission,
                                  hint: "Необязательно — по умолчанию 0 USD",

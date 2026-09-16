@@ -2,6 +2,8 @@ package com.crossfolio.common.portfolio.edit
 
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.decimal.DecimalValue
+import com.crossfolio.common.core.market.MarketPriceSource
+import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.model.PortfolioOperationRules
 import com.crossfolio.common.portfolio.model.AcquisitionPriceSource
 import kotlin.test.Test
@@ -11,14 +13,19 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class EditViewModelTest {
-    private fun model() = EditViewModel(Asset("1", "BTC"), {}, nowEpochMillis = { 120_000L })
+    private fun model() = EditViewModel(
+        Asset("1", "BTC"), {}, nowEpochMillis = { 120_000L }, marketPriceSource = FixedMarketPriceSource,
+    ).also { it.fetchMarketPrice() }
 
     @Test
     fun formAndPositionUseTheSameCustomOperationLimits() {
         val rules = AssetFieldRules(PortfolioOperationRules(
             quantityFractionDigits = 0, maximumInputValue = DecimalValue("2"),
         ))
-        val model = EditViewModel(Asset("1", "BTC"), {}, rules, nowEpochMillis = { 120_000L })
+        val model = EditViewModel(
+            Asset("1", "BTC"), {}, rules, nowEpochMillis = { 120_000L },
+            marketPriceSource = FixedMarketPriceSource,
+        ).also { it.fetchMarketPrice() }
         model.setQuantity("1.1")
         assertTrue(model.state.value.quantity.isError)
         model.setQuantity("3")
@@ -79,5 +86,45 @@ class EditViewModelTest {
         assertTrue(model.state.value.canSave)
         model.save()
         assertTrue(model.state.value.canSave)
+    }
+
+    @Test
+    fun fetchedMarketPriceEnablesSavingWithoutManualPrice() {
+        val source = ManualMarketPriceSource()
+        val model = EditViewModel(
+            Asset("1", "BTC"), {}, nowEpochMillis = { 120_000L }, marketPriceSource = source,
+        )
+        model.fetchMarketPrice()
+        model.setQuantity("1")
+        assertTrue(model.state.value.isMarketPriceLoading)
+        assertFalse(model.state.value.canSave)
+
+        source.complete(DecimalValue("12.3456789"))
+
+        assertEquals(DecimalValue("12.3456789"), model.state.value.marketPriceUsd)
+        assertFalse(model.state.value.isMarketPriceLoading)
+        assertEquals(
+            AcquisitionPriceSource.MARKET,
+            model.state.value.position?.operations?.single()?.acquisitionPrice?.source,
+        )
+        assertTrue(model.state.value.canSave)
+    }
+}
+
+private object FixedMarketPriceSource : MarketPriceSource {
+    override fun fetchMarketPrice(asset: Asset, completion: (NetworkResult<DecimalValue>) -> Unit) {
+        completion(NetworkResult(DecimalValue("100"), null))
+    }
+}
+
+private class ManualMarketPriceSource : MarketPriceSource {
+    private lateinit var completion: (NetworkResult<DecimalValue>) -> Unit
+
+    override fun fetchMarketPrice(asset: Asset, completion: (NetworkResult<DecimalValue>) -> Unit) {
+        this.completion = completion
+    }
+
+    fun complete(price: DecimalValue) {
+        completion(NetworkResult(price, null))
     }
 }

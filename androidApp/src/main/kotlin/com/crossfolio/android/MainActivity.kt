@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
                 assetCatalog = client,
                 imageLoader = client::fetchImg,
                 logoUrlProvider = client::logoUrl,
+                marketPriceSource = client,
             ),
             profileViewModel = profileViewModel,
             apiKeyInteractor = interactor,
