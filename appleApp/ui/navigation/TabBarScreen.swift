@@ -7,41 +7,13 @@ struct TabBarScreen: View {
     @State private var alertMessage: String?
     @State private var stopObservingTabs: (() -> Void)?
 
-    init(coordinator: TabBarCoordinator? = nil) {
-        let coordinator = coordinator ?? Self.makeCoordinator()
+    init(coordinator: TabBarCoordinator) {
         self.coordinator = coordinator
         _selectedTab = State(
             initialValue: (coordinator.state.value as? TabBarState)?.selectedTab ?? .portfolio
         )
         _alertMessage = State(initialValue:
             (coordinator.state.value as? TabBarState)?.alertMessage)
-    }
-
-    private static func makeCoordinator() -> TabBarCoordinator {
-        let secureStorage = AppleProfileSecureStorage()
-        let transport = NetworkManager()
-        let interactor = ApiKeyInteractor(secureStorage: secureStorage,
-            validation: CoinMarketCapClient(transport: transport, apiKeyProvider: { "" }))
-        let client = CoinMarketCapClient(transport: transport, apiKeyProvider: {
-            interactor.getSavedKey()
-        })
-        let profileViewModel = ProfileViewModel(
-            preferencesStorage: AppleProfilePreferencesStorage(), apiKeyInteractor: interactor)
-        let portfolioStorage = ApplePortfolioStorageKt.createApplePortfolioStorage()
-        return TabBarCoordinator(
-            portfolioCoordinator: PortfolioCoordinator(
-                assetCatalog: client,
-                imageLoader: { url, completion in
-                    client.fetchImg(url: url) { result in _ = completion(result) }
-                },
-                logoUrlProvider: { asset in client.logoUrl(asset: asset) },
-                marketPriceSource: client,
-                portfolioStorage: portfolioStorage
-            ),
-            analyticsViewModel: AnalyticsViewModel(),
-            profileViewModel: profileViewModel,
-            apiKeyInteractor: interactor
-        )
     }
 
     var body: some View {
@@ -100,5 +72,5 @@ struct TabBarScreen: View {
 }
 
 #Preview {
-    TabBarScreen()
+    TabBarScreen(coordinator: AppContainer().tabBarCoordinator)
 }
