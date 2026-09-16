@@ -75,6 +75,10 @@ class CoinMarketCapClient(
         ids: List<String>,
         completion: (NetworkResult<Map<String, DecimalValue>>) -> Unit,
     ) {
+        // TODO(CoinMarketCap V3 migration): Migrate quotes/latest from V2 to the current V3 API.
+        // Before implementation, verify the official response schema, authentication and plan availability,
+        // credit limits, and deprecation timeline. Preserve exact decimal parsing, saved-key stale-response
+        // protection, and NetworkFailure mapping. Update common fixtures plus Android and Apple contract tests.
         request("v2/cryptocurrency/quotes/latest?id=${encode(idString)}&convert=USD", { payload ->
             val data = payload.getValue("data").jsonObject
             ids.associateWith { id ->
