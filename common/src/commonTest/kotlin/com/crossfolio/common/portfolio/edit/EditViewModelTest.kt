@@ -111,10 +111,10 @@ class EditViewModelTest {
     }
 
     @Test
-    fun marketPriceTextRoundsOnlyValuesAboveOneAndDropsTrailingZeros() {
+    fun marketPriceTextUsesEightDigitsBelowOneAndTwoDigitsOtherwise() {
         fun format(value: String) = EditState(
             occurredAtEpochMillis = 0,
-            marketPriceUsd = DecimalValue(value),
+            marketPriceUsd = DecimalValue.parse(value),
         ).marketPriceUsdText
 
         assertEquals("123.46", format("123.456"))
@@ -122,6 +122,9 @@ class EditViewModelTest {
         assertEquals("123", format("123.004"))
         assertEquals("10", format("9.999"))
         assertEquals("0.123456", format("0.123456"))
+        assertEquals("0.12345679", format("0.123456789"))
+        assertEquals("0.0012", format("0.00120000"))
+        assertEquals("0", format("0.000000001"))
         assertEquals("1", format("1"))
     }
 }

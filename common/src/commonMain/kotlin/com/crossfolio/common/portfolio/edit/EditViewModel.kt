@@ -44,10 +44,16 @@ data class EditState(
 }
 
 private fun formatMarketPrice(price: DecimalValue): String {
-    if (price <= DecimalValue("1") || price.fractionDigits <= 2) return price.value
+    val visibleFractionDigits = if (price < DecimalValue("1")) 8 else 2
+    if (price.fractionDigits <= visibleFractionDigits) return price.value
     val fraction = price.value.substringAfter('.')
-    val shortened = DecimalValue.parse("${price.value.substringBefore('.')}.${fraction.take(2)}")
-    return if (fraction[2] >= '5') shortened.add(DecimalValue("0.01")).value else shortened.value
+    val shortened = DecimalValue.parse(
+        "${price.value.substringBefore('.')}.${fraction.take(visibleFractionDigits)}",
+    )
+    val roundingUnit = DecimalValue.parse("0." + "0".repeat(visibleFractionDigits - 1) + "1")
+    return if (fraction[visibleFractionDigits] >= '5') {
+        shortened.add(roundingUnit).value
+    } else shortened.value
 }
 
 @OptIn(ExperimentalUuidApi::class)
