@@ -64,7 +64,7 @@ class CoinMarketCapClient(
             val price = payload.getValue("data").jsonObject.getValue(id).jsonObject
                 .getValue("quote").jsonObject.getValue("USD").jsonObject
                 .getValue("price").jsonPrimitive
-            DecimalValue.parse(price.content).also { require(!it.isZero) }
+            parseJsonDecimal(price.content).also { require(!it.isZero) }
         }, completion)
     }
 
@@ -129,6 +129,24 @@ class CoinMarketCapClient(
         val value = getValue(name).jsonPrimitive
         require(value.isString)
         return value.content
+    }
+
+    private fun parseJsonDecimal(value: String): DecimalValue {
+        val match = Regex("([0-9]+)(?:\\.([0-9]+))?(?:[eE]([+-]?[0-9]+))?").matchEntire(value)
+            ?: error("Invalid decimal format")
+        val whole = match.groupValues[1]
+        val fraction = match.groupValues[2]
+        val exponent = match.groupValues[3].ifEmpty { "0" }.toIntOrNull()
+            ?: error("Decimal exponent is out of range")
+        require(exponent in -1_000..1_000) { "Decimal exponent is out of range" }
+        val digits = whole + fraction
+        val decimalIndex = whole.length + exponent
+        val plain = when {
+            decimalIndex <= 0 -> "0." + "0".repeat(-decimalIndex) + digits
+            decimalIndex >= digits.length -> digits + "0".repeat(decimalIndex - digits.length)
+            else -> digits.substring(0, decimalIndex) + "." + digits.substring(decimalIndex)
+        }
+        return DecimalValue.parse(plain)
     }
 
     private fun encode(value: String): String = value.encodeToByteArray().joinToString("") { byte ->

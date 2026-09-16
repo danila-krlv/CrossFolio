@@ -192,6 +192,18 @@ class CoinMarketCapClientTest {
         client.fetchMap { assertEquals(NetworkFailure.TRANSPORT, it.failure) }
         transport.callback(NetworkResult(null, "Network request failed", NetworkFailure.TRANSPORT))
     }
+
+    @Test
+    fun decodesScientificMarketPriceWithoutLosingPrecision() {
+        val transport = FakeTransport()
+        val client = CoinMarketCapClient(transport) { "placeholder" }
+        client.fetchMarketPrice(Asset("1", "BTC")) {
+            assertEquals(DecimalValue("0.000000123456789123"), it.value)
+        }
+
+        transport.complete(200, """{"status":{"error_code":0},"data":{"1":{"quote":{"USD":{
+            "price":1.23456789123e-7}}}}}""")
+    }
 }
 
 private class FakeTransport : HttpTransport {
