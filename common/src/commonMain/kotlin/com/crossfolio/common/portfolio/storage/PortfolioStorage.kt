@@ -25,7 +25,7 @@ class StorageResult<T : Any>(
 interface PortfolioStorage {
     suspend fun loadPositions(): StorageResult<List<PortfolioPosition>>
 
-    /** Adds or updates the asset and operations present in this aggregate. Existing operations are not removed. */
+    /** Creates a position or appends new operation IDs without replacing the stored asset or history. */
     suspend fun savePosition(position: PortfolioPosition): StorageResult<Unit>
 
     /** Deletes the position together with all of its operations and its last quote. */

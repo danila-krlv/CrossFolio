@@ -55,8 +55,29 @@ class RoomPortfolioStorageTest {
             assertEquals(DecimalValue("1.5"), loaded.quantity)
             assertEquals(initialQuote, loaded.latestQuote)
 
+            val duplicateAsset = Asset("1", "CHANGED", name = "Changed")
+            val appended = PortfolioOperation(
+                id = "appended",
+                direction = PortfolioOperationDirection.ADDITION,
+                quantity = DecimalValue("1"),
+                occurredAtEpochMillis = 2_500,
+                acquisitionPrice = AcquisitionPrice(
+                    DecimalValue("55000"),
+                    AcquisitionPriceSource.MARKET,
+                ),
+            )
+            val appendedPosition = PortfolioPosition(duplicateAsset, listOf(appended), initialQuote)
+            assertNull(storage.savePosition(appendedPosition).failure)
+            assertNull(storage.savePosition(appendedPosition).failure)
+
+            val combined = assertNotNull(storage.loadPositions().value).single()
+            assertEquals(asset, combined.asset)
+            assertEquals(listOf(addition, reduction, appended), combined.operations)
+            assertEquals(DecimalValue("2.5"), combined.quantity)
+
             val updatedQuote = AssetQuote(asset.identity, DecimalValue("61000"), 4_000)
             assertNull(storage.saveLastQuote(updatedQuote).failure)
+            assertNull(storage.saveLastQuote(initialQuote).failure)
             assertEquals(updatedQuote, storage.loadLastQuote(asset.identity).value)
 
             assertNull(storage.deletePosition(asset.identity).failure)

@@ -48,8 +48,8 @@ internal class RoomPortfolioStorage(
         val identity = position.asset.identity
         dao.savePosition(
             asset = position.asset.toEntity(),
-            operations = position.operations.mapIndexed { index, operation ->
-                operation.toEntity(identity, index)
+            operations = position.operations.map { operation ->
+                operation.toEntity(identity)
             },
             quote = position.latestQuote?.toEntity(),
         )
@@ -85,7 +85,7 @@ internal class RoomPortfolioStorage(
     }
 
     override suspend fun saveLastQuote(quote: AssetQuote): StorageResult<Unit> = try {
-        dao.upsertQuote(quote.toEntity())
+        dao.saveQuote(quote.toEntity())
         success(Unit)
     } catch (error: CancellationException) {
         throw error
@@ -105,11 +105,11 @@ private fun Asset.toEntity() = AssetEntity(
     rank = rank,
 )
 
-private fun PortfolioOperation.toEntity(identity: AssetIdentity, recordOrder: Int) = OperationEntity(
+private fun PortfolioOperation.toEntity(identity: AssetIdentity) = OperationEntity(
     searchPlatform = identity.searchPlatform.toStorageValue(),
     searchId = identity.searchId,
     operationId = id,
-    recordOrder = recordOrder,
+    recordOrder = 0,
     direction = direction.toStorageValue(),
     quantity = quantity.value,
     occurredAtEpochMillis = occurredAtEpochMillis,

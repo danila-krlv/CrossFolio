@@ -3,6 +3,8 @@ package com.crossfolio.common.portfolio.storage
 import androidx.room3.ConstructedBy
 import androidx.room3.Dao
 import androidx.room3.Database
+import androidx.room3.Insert
+import androidx.room3.OnConflictStrategy
 import androidx.room3.Query
 import androidx.room3.RoomDatabase
 import androidx.room3.RoomDatabaseConstructor
@@ -23,14 +25,20 @@ internal abstract class PortfolioDao {
     @Query("SELECT * FROM last_quotes WHERE search_platform = :platform AND search_id = :searchId")
     abstract suspend fun loadQuote(platform: String, searchId: String): QuoteEntity?
 
-    @Upsert
-    protected abstract suspend fun upsertAsset(asset: AssetEntity)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    protected abstract suspend fun insertAsset(asset: AssetEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    protected abstract suspend fun insertOperation(operation: OperationEntity): Long
+
+    @Query(
+        "SELECT COALESCE(MAX(record_order), -1) FROM operations " +
+            "WHERE search_platform = :platform AND search_id = :searchId",
+    )
+    protected abstract suspend fun lastOperationOrder(platform: String, searchId: String): Int
 
     @Upsert
-    protected abstract suspend fun upsertOperations(operations: List<OperationEntity>)
-
-    @Upsert
-    abstract suspend fun upsertQuote(quote: QuoteEntity)
+    protected abstract suspend fun upsertQuote(quote: QuoteEntity)
 
     @Query("DELETE FROM assets WHERE search_platform = :platform AND search_id = :searchId")
     abstract suspend fun deletePosition(platform: String, searchId: String)
@@ -50,9 +58,20 @@ internal abstract class PortfolioDao {
         operations: List<OperationEntity>,
         quote: QuoteEntity?,
     ) {
-        upsertAsset(asset)
-        if (operations.isNotEmpty()) upsertOperations(operations)
-        if (quote != null) upsertQuote(quote)
+        insertAsset(asset)
+        var nextOrder = lastOperationOrder(asset.searchPlatform, asset.searchId) + 1
+        operations.forEach { operation ->
+            if (insertOperation(operation.copy(recordOrder = nextOrder)) != -1L) nextOrder++
+        }
+        if (quote != null) saveQuote(quote)
+    }
+
+    @Transaction
+    open suspend fun saveQuote(quote: QuoteEntity) {
+        val stored = loadQuote(quote.searchPlatform, quote.searchId)
+        if (stored == null || quote.receivedAtEpochMillis >= stored.receivedAtEpochMillis) {
+            upsertQuote(quote)
+        }
     }
 }
 

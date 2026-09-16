@@ -7,9 +7,10 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 
-fun createApplePortfolioStorage(
-    databasePath: String = defaultPortfolioDatabasePath(),
-): PortfolioStorage = createRoomPortfolioStorage(
+fun createApplePortfolioStorage(): PortfolioStorage =
+    createApplePortfolioStorage(defaultPortfolioDatabasePath())
+
+fun createApplePortfolioStorage(databasePath: String): PortfolioStorage = createRoomPortfolioStorage(
     Room.databaseBuilder<PortfolioDatabase>(name = databasePath),
 )
 

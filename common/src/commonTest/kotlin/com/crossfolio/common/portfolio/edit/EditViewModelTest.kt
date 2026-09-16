@@ -1,11 +1,17 @@
 package com.crossfolio.common.portfolio.edit
 
 import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.core.asset.AssetIdentity
+import com.crossfolio.common.core.market.AssetQuote
 import com.crossfolio.common.core.decimal.DecimalValue
 import com.crossfolio.common.core.market.MarketPriceSource
 import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.model.PortfolioOperationRules
 import com.crossfolio.common.portfolio.model.AcquisitionPriceSource
+import com.crossfolio.common.portfolio.model.PortfolioPosition
+import com.crossfolio.common.portfolio.storage.PortfolioStorage
+import com.crossfolio.common.portfolio.storage.StorageFailure
+import com.crossfolio.common.portfolio.storage.StorageResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -89,6 +95,45 @@ class EditViewModelTest {
     }
 
     @Test
+    fun savePersistsPreparedPositionAndReportsCompletion() {
+        val storage = RecordingPortfolioStorage()
+        var saved = false
+        val model = EditViewModel(
+            Asset("1", "BTC"), {}, nowEpochMillis = { 120_000L },
+            marketPriceSource = FixedMarketPriceSource,
+            portfolioStorage = storage,
+            onSavedRequested = { saved = true },
+        )
+        model.setQuantity("1")
+
+        model.save()
+
+        assertEquals(model.state.value.position, storage.savedPosition)
+        assertTrue(saved)
+        assertFalse(model.state.value.isSaving)
+        assertNull(model.state.value.storageFailure)
+    }
+
+    @Test
+    fun saveFailureStaysInEditState() {
+        val storage = RecordingPortfolioStorage(StorageFailure.WRITE)
+        var saved = false
+        val model = EditViewModel(
+            Asset("1", "BTC"), {}, nowEpochMillis = { 120_000L },
+            marketPriceSource = FixedMarketPriceSource,
+            portfolioStorage = storage,
+            onSavedRequested = { saved = true },
+        )
+        model.setQuantity("1")
+
+        model.save()
+
+        assertFalse(saved)
+        assertFalse(model.state.value.isSaving)
+        assertEquals(StorageFailure.WRITE, model.state.value.storageFailure)
+    }
+
+    @Test
     fun fetchedMarketPriceEnablesSavingWithoutManualPrice() {
         val source = ManualMarketPriceSource()
         val model = EditViewModel(
@@ -126,6 +171,28 @@ class EditViewModelTest {
         assertEquals("0", format("0.000000001"))
         assertEquals("1", format("1"))
     }
+}
+
+private class RecordingPortfolioStorage(
+    private val saveFailure: StorageFailure? = null,
+) : PortfolioStorage {
+    var savedPosition: PortfolioPosition? = null
+
+    override suspend fun loadPositions() = StorageResult(emptyList<PortfolioPosition>(), null)
+
+    override suspend fun savePosition(position: PortfolioPosition): StorageResult<Unit> {
+        savedPosition = position
+        return if (saveFailure == null) StorageResult(Unit, null) else StorageResult(null, saveFailure)
+    }
+
+    override suspend fun deletePosition(assetIdentity: AssetIdentity) = StorageResult(Unit, null)
+
+    override suspend fun loadLastQuote(assetIdentity: AssetIdentity) =
+        StorageResult<AssetQuote>(null, StorageFailure.NOT_FOUND)
+
+    override suspend fun saveLastQuote(quote: AssetQuote) = StorageResult(Unit, null)
+
+    override fun close() = Unit
 }
 
 private object FixedMarketPriceSource : MarketPriceSource {

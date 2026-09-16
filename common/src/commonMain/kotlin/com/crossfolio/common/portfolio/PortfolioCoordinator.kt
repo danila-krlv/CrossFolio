@@ -8,6 +8,7 @@ import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.assetsearch.AssetSearchViewModel
 import com.crossfolio.common.portfolio.edit.EditViewModel
 import com.crossfolio.common.portfolio.overview.PortfolioViewModel
+import com.crossfolio.common.portfolio.storage.PortfolioStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +38,7 @@ class PortfolioCoordinator(
     imageLoader: ((String, (NetworkResult<ByteArray>) -> Unit) -> Unit)? = null,
     logoUrlProvider: (Asset) -> String? = { null },
     private val marketPriceSource: MarketPriceSource? = null,
+    private val portfolioStorage: PortfolioStorage? = null,
 ) {
     private val _state = MutableStateFlow(PortfolioNavigationState())
     val state: StateFlow<PortfolioNavigationState> = _state.asStateFlow()
@@ -46,6 +48,7 @@ class PortfolioCoordinator(
 
     val portfolioViewModel = PortfolioViewModel(
         onAssetSearchRequested = ::openAssetSearch,
+        portfolioStorage = portfolioStorage,
     )
     val assetSearchViewModel = AssetSearchViewModel(
         onBackRequested = ::navigateBack,
@@ -95,6 +98,11 @@ class PortfolioCoordinator(
             onMarketPriceFailed = { failure ->
                 if (editSession === session) onNetworkFailure(failure)
             },
+            portfolioStorage = portfolioStorage,
+            onSavedRequested = {
+                portfolioViewModel.loadPositions()
+                if (editSession === session) onPositionSaved()
+            },
         )
         if (editSession !== session) return
         editViewModel = model
@@ -108,5 +116,11 @@ class PortfolioCoordinator(
             editViewModel = null
             _state.value = _state.value.copy(backStack = backStack.dropLast(1))
         }
+    }
+
+    private fun onPositionSaved() {
+        editSession = null
+        editViewModel = null
+        _state.value = _state.value.copy(backStack = listOf(PortfolioRoute.PORTFOLIO))
     }
 }

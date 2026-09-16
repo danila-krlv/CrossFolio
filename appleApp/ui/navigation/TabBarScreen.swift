@@ -27,6 +27,7 @@ struct TabBarScreen: View {
         })
         let profileViewModel = ProfileViewModel(
             preferencesStorage: AppleProfilePreferencesStorage(), apiKeyInteractor: interactor)
+        let portfolioStorage = ApplePortfolioStorageKt.createApplePortfolioStorage()
         return TabBarCoordinator(
             portfolioCoordinator: PortfolioCoordinator(
                 assetCatalog: client,
@@ -34,7 +35,8 @@ struct TabBarScreen: View {
                     client.fetchImg(url: url) { result in _ = completion(result) }
                 },
                 logoUrlProvider: { asset in client.logoUrl(asset: asset) },
-                marketPriceSource: client
+                marketPriceSource: client,
+                portfolioStorage: portfolioStorage
             ),
             analyticsViewModel: AnalyticsViewModel(),
             profileViewModel: profileViewModel,

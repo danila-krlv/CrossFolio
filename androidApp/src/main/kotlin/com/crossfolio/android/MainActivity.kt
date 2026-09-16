@@ -12,6 +12,7 @@ import com.crossfolio.common.core.network.CoinMarketCapClient
 import com.crossfolio.common.navigation.TabBarCoordinator
 import com.crossfolio.common.portfolio.PortfolioCoordinator
 import com.crossfolio.common.profile.ProfileViewModel
+import com.crossfolio.common.portfolio.storage.createAndroidPortfolioStorage
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,12 +22,14 @@ class MainActivity : ComponentActivity() {
         val interactor = ApiKeyInteractor(secureStorage, CoinMarketCapClient(transport) { "" })
         val client = CoinMarketCapClient(transport, interactor::getSavedKey)
         val profileViewModel = ProfileViewModel(AndroidProfilePreferencesStorage(this), interactor)
+        val portfolioStorage = createAndroidPortfolioStorage(this)
         val coordinator = TabBarCoordinator(
             portfolioCoordinator = PortfolioCoordinator(
                 assetCatalog = client,
                 imageLoader = client::fetchImg,
                 logoUrlProvider = client::logoUrl,
                 marketPriceSource = client,
+                portfolioStorage = portfolioStorage,
             ),
             profileViewModel = profileViewModel,
             apiKeyInteractor = interactor,
