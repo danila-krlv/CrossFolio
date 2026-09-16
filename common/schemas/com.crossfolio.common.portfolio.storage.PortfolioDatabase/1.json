@@ -1,0 +1,213 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "09bb76f0fa885b52917f9035e3cc2c47",
+    "entities": [
+      {
+        "tableName": "assets",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`search_platform` TEXT NOT NULL, `search_id` TEXT NOT NULL, `ticker` TEXT NOT NULL, `name` TEXT NOT NULL, `slug` TEXT NOT NULL, `rank` INTEGER, PRIMARY KEY(`search_platform`, `search_id`))",
+        "fields": [
+          {
+            "fieldPath": "searchPlatform",
+            "columnName": "search_platform",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "searchId",
+            "columnName": "search_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ticker",
+            "columnName": "ticker",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slug",
+            "columnName": "slug",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rank",
+            "columnName": "rank",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "search_platform",
+            "search_id"
+          ]
+        }
+      },
+      {
+        "tableName": "operations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`search_platform` TEXT NOT NULL, `search_id` TEXT NOT NULL, `operation_id` TEXT NOT NULL, `record_order` INTEGER NOT NULL, `direction` TEXT NOT NULL, `quantity` TEXT NOT NULL, `occurred_at_epoch_millis` INTEGER NOT NULL, `acquisition_price_usd` TEXT, `acquisition_price_source` TEXT, `commission_usd` TEXT NOT NULL, PRIMARY KEY(`search_platform`, `search_id`, `operation_id`), FOREIGN KEY(`search_platform`, `search_id`) REFERENCES `assets`(`search_platform`, `search_id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "searchPlatform",
+            "columnName": "search_platform",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "searchId",
+            "columnName": "search_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "operationId",
+            "columnName": "operation_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recordOrder",
+            "columnName": "record_order",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "direction",
+            "columnName": "direction",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantity",
+            "columnName": "quantity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "occurredAtEpochMillis",
+            "columnName": "occurred_at_epoch_millis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "acquisitionPriceUsd",
+            "columnName": "acquisition_price_usd",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "acquisitionPriceSource",
+            "columnName": "acquisition_price_source",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "commissionUsd",
+            "columnName": "commission_usd",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "search_platform",
+            "search_id",
+            "operation_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_operations_search_platform_search_id_record_order",
+            "unique": true,
+            "columnNames": [
+              "search_platform",
+              "search_id",
+              "record_order"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_operations_search_platform_search_id_record_order` ON `${TABLE_NAME}` (`search_platform`, `search_id`, `record_order`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "assets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "search_platform",
+              "search_id"
+            ],
+            "referencedColumns": [
+              "search_platform",
+              "search_id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "last_quotes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`search_platform` TEXT NOT NULL, `search_id` TEXT NOT NULL, `price_usd` TEXT NOT NULL, `received_at_epoch_millis` INTEGER NOT NULL, PRIMARY KEY(`search_platform`, `search_id`), FOREIGN KEY(`search_platform`, `search_id`) REFERENCES `assets`(`search_platform`, `search_id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "searchPlatform",
+            "columnName": "search_platform",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "searchId",
+            "columnName": "search_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "priceUsd",
+            "columnName": "price_usd",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receivedAtEpochMillis",
+            "columnName": "received_at_epoch_millis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "search_platform",
+            "search_id"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "assets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "search_platform",
+              "search_id"
+            ],
+            "referencedColumns": [
+              "search_platform",
+              "search_id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '09bb76f0fa885b52917f9035e3cc2c47')"
+    ]
+  }
+}

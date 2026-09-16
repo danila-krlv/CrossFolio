@@ -10,6 +10,8 @@ import com.crossfolio.common.portfolio.model.AcquisitionPriceSource
 import com.crossfolio.common.portfolio.model.PortfolioOperation
 import com.crossfolio.common.portfolio.model.PortfolioOperationDirection
 import com.crossfolio.common.portfolio.model.PortfolioPosition
+import com.crossfolio.common.portfolio.storage.PortfolioStorage
+import com.crossfolio.common.portfolio.storage.StorageFailure
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +40,8 @@ data class EditState(
     val marketPriceUsd: DecimalValue? = null,
     val isMarketPriceLoading: Boolean = false,
     val position: PortfolioPosition? = null,
+    val isSaving: Boolean = false,
+    val storageFailure: StorageFailure? = null,
 ) {
     val canSave: Boolean get() = position != null
     val marketPriceUsdText: String? get() = marketPriceUsd?.let(::formatMarketPrice)
@@ -64,6 +68,8 @@ class EditViewModel(
     private val nowEpochMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val marketPriceSource: MarketPriceSource? = null,
     private val onMarketPriceFailed: (NetworkFailure?) -> Unit = {},
+    private val portfolioStorage: PortfolioStorage? = null,
+    private val onSavedRequested: () -> Unit = {},
 ) {
     private val operationId = Uuid.random().toString()
     private var quote: AssetQuote? = null
@@ -71,6 +77,7 @@ class EditViewModel(
         occurredAtEpochMillis = nowEpochMillis() / 60_000 * 60_000,
     ))
     val state: StateFlow<EditState> = _state.asStateFlow()
+    private val scope = CoroutineScope(Dispatchers.Main.immediate)
 
     init {
         update(_state.value)
@@ -129,8 +136,14 @@ class EditViewModel(
 
     fun save() {
         val position = state.value.position ?: return
-        println("саксес: ${position.asset.ticker}, ${position.quantity.value}")
-        // TODO: Persist state.value.position when saving is implemented.
+        val storage = portfolioStorage ?: return
+        if (state.value.isSaving) return
+        _state.value = state.value.copy(isSaving = true, storageFailure = null)
+        scope.launch {
+            val result = storage.savePosition(position)
+            _state.value = state.value.copy(isSaving = false, storageFailure = result.failure)
+            if (result.failure == null) onSavedRequested()
+        }
     }
 
     fun observeState(observer: (EditState) -> Unit): () -> Unit {
