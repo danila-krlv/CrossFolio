@@ -66,6 +66,25 @@ class AssetSearchViewModelTest {
     }
 
     @Test
+    fun synchronousMarketPriceFailureCanResetNavigation() {
+        val network = FakeNetwork()
+        lateinit var coordinator: PortfolioCoordinator
+        coordinator = PortfolioCoordinator(
+            assetCatalog = network,
+            marketPriceSource = FailingMarketPriceSource(NetworkFailure.INVALID_KEY),
+        )
+        coordinator.onNetworkFailure = { coordinator.resetNavigation() }
+        coordinator.setSearchEnabled(true)
+        coordinator.openAssetSearch()
+        network.complete(NetworkResult(catalog, null))
+
+        coordinator.assetSearchViewModel.selectAsset(catalog.first())
+
+        assertEquals(PortfolioRoute.PORTFOLIO, coordinator.state.value.currentRoute)
+        assertNull(coordinator.editViewModel)
+    }
+
+    @Test
     fun loadsOnceAndSearchesLocallyByCaseInsensitivePrefix() {
         val network = FakeNetwork()
         val model = model(network)
@@ -208,6 +227,14 @@ private class ManualMarketPriceSource : MarketPriceSource {
     }
 
     fun fail(failure: NetworkFailure) {
+        completion(NetworkResult(null, "Price unavailable", failure))
+    }
+}
+
+private class FailingMarketPriceSource(
+    private val failure: NetworkFailure,
+) : MarketPriceSource {
+    override fun fetchMarketPrice(asset: Asset, completion: (NetworkResult<DecimalValue>) -> Unit) {
         completion(NetworkResult(null, "Price unavailable", failure))
     }
 }

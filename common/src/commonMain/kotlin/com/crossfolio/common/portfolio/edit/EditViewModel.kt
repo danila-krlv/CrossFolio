@@ -72,7 +72,10 @@ class EditViewModel(
     ))
     val state: StateFlow<EditState> = _state.asStateFlow()
 
-    init { update(_state.value) }
+    init {
+        update(_state.value)
+        fetchMarketPrice()
+    }
 
     fun setQuantity(text: String) = update(_state.value.copy(quantity = EditFieldState(text, true)))
     fun setPrice(text: String) = update(_state.value.copy(price = EditFieldState(text, true)))
@@ -106,7 +109,7 @@ class EditViewModel(
         )
     }
 
-    fun fetchMarketPrice() {
+    private fun fetchMarketPrice() {
         val source = marketPriceSource ?: return
         if (quote != null || _state.value.isMarketPriceLoading) return
         update(_state.value.copy(isMarketPriceLoading = true))

@@ -88,7 +88,7 @@ class PortfolioCoordinator(
         if (!_state.value.isSearchEnabled || _state.value.currentRoute != PortfolioRoute.ASSET_SEARCH) return
         val session = Any()
         editSession = session
-        editViewModel = EditViewModel(
+        val model = EditViewModel(
             asset,
             ::navigateBack,
             marketPriceSource = marketPriceSource,
@@ -96,8 +96,9 @@ class PortfolioCoordinator(
                 if (editSession === session) onNetworkFailure(failure)
             },
         )
+        if (editSession !== session) return
+        editViewModel = model
         _state.value = _state.value.copy(backStack = _state.value.backStack + PortfolioRoute.EDIT)
-        editViewModel?.fetchMarketPrice()
     }
 
     private fun navigateBack() {

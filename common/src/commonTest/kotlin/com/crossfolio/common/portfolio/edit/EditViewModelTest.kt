@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
 class EditViewModelTest {
     private fun model() = EditViewModel(
         Asset("1", "BTC"), {}, nowEpochMillis = { 120_000L }, marketPriceSource = FixedMarketPriceSource,
-    ).also { it.fetchMarketPrice() }
+    )
 
     @Test
     fun formAndPositionUseTheSameCustomOperationLimits() {
@@ -25,7 +25,7 @@ class EditViewModelTest {
         val model = EditViewModel(
             Asset("1", "BTC"), {}, rules, nowEpochMillis = { 120_000L },
             marketPriceSource = FixedMarketPriceSource,
-        ).also { it.fetchMarketPrice() }
+        )
         model.setQuantity("1.1")
         assertTrue(model.state.value.quantity.isError)
         model.setQuantity("3")
@@ -94,7 +94,6 @@ class EditViewModelTest {
         val model = EditViewModel(
             Asset("1", "BTC"), {}, nowEpochMillis = { 120_000L }, marketPriceSource = source,
         )
-        model.fetchMarketPrice()
         model.setQuantity("1")
         assertTrue(model.state.value.isMarketPriceLoading)
         assertFalse(model.state.value.canSave)
