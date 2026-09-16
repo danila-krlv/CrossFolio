@@ -3,10 +3,11 @@ package com.crossfolio.common.core.network
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.asset.AssetCatalog
 import com.crossfolio.common.core.asset.SearchPlatform
+import com.crossfolio.common.core.decimal.DecimalValue
+import com.crossfolio.common.core.market.MarketPriceSource
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -16,7 +17,7 @@ import kotlinx.serialization.json.long
 class CoinMarketCapClient(
     private val transport: HttpTransport,
     private val apiKeyProvider: () -> String,
-) : AssetCatalog, ApiKeyValidation {
+) : AssetCatalog, ApiKeyValidation, MarketPriceSource {
     override fun validateApiKey(apiKey: String, completion: (NetworkResult<Boolean>) -> Unit) {
         request("v1/key/info", { payload ->
             payload.getValue("data").jsonObject
@@ -42,11 +43,49 @@ class CoinMarketCapClient(
 
     fun fetchPriceArray(idString: String, idArray: List<String>,
         completion: (NetworkResult<Map<String, Double>>) -> Unit) {
+        fetchMarketPrices(idString, idArray) { result ->
+            val prices = result.value
+            if (prices == null) {
+                completion(NetworkResult(null, result.error, result.failure))
+                return@fetchMarketPrices
+            }
+            val doubles = runCatching {
+                prices.mapValues { (_, price) -> price.value.toDouble().also { require(it.isFinite()) } }
+            }.getOrNull()
+            completion(if (doubles == null) invalidResponse() else NetworkResult(doubles, null))
+        }
+    }
+
+    override fun fetchMarketPrice(asset: Asset, completion: (NetworkResult<DecimalValue>) -> Unit) {
+        val id = asset.searchId
+        if (asset.searchPlatform != SearchPlatform.COIN_MARKET_CAP ||
+            id.isEmpty() || !id.all { it in '0'..'9' } || id.all { it == '0' }) {
+            completion(invalidResponse())
+            return
+        }
+        fetchMarketPrices(id, listOf(id)) { result ->
+            val price = result.value?.get(id)
+            if (price == null) completion(NetworkResult(null, result.error, result.failure))
+            else completion(NetworkResult(price, null))
+        }
+    }
+
+    private fun fetchMarketPrices(
+        idString: String,
+        ids: List<String>,
+        completion: (NetworkResult<Map<String, DecimalValue>>) -> Unit,
+    ) {
+        // TODO(CoinMarketCap V3 migration): Migrate quotes/latest from V2 to the current V3 API.
+        // Before implementation, verify the official response schema, authentication and plan availability,
+        // credit limits, and deprecation timeline. Preserve exact decimal parsing, saved-key stale-response
+        // protection, and NetworkFailure mapping. Update common fixtures plus Android and Apple contract tests.
         request("v2/cryptocurrency/quotes/latest?id=${encode(idString)}&convert=USD", { payload ->
             val data = payload.getValue("data").jsonObject
-            idArray.associateWith {
-                data.getValue(it).jsonObject.getValue("quote").jsonObject.getValue("USD")
-                    .jsonObject.getValue("price").jsonPrimitive.double.also { price -> require(price.isFinite()) }
+            ids.associateWith { id ->
+                val price = data.getValue(id).jsonObject
+                    .getValue("quote").jsonObject.getValue("USD").jsonObject
+                    .getValue("price").jsonPrimitive
+                parseJsonDecimal(price.content).also { require(!it.isZero) }
             }
         }, completion)
     }
@@ -112,6 +151,24 @@ class CoinMarketCapClient(
         val value = getValue(name).jsonPrimitive
         require(value.isString)
         return value.content
+    }
+
+    private fun parseJsonDecimal(value: String): DecimalValue {
+        val match = Regex("([0-9]+)(?:\\.([0-9]+))?(?:[eE]([+-]?[0-9]+))?").matchEntire(value)
+            ?: error("Invalid decimal format")
+        val whole = match.groupValues[1]
+        val fraction = match.groupValues[2]
+        val exponent = match.groupValues[3].ifEmpty { "0" }.toIntOrNull()
+            ?: error("Decimal exponent is out of range")
+        require(exponent in -1_000..1_000) { "Decimal exponent is out of range" }
+        val digits = whole + fraction
+        val decimalIndex = whole.length + exponent
+        val plain = when {
+            decimalIndex <= 0 -> "0." + "0".repeat(-decimalIndex) + digits
+            decimalIndex >= digits.length -> digits + "0".repeat(decimalIndex - digits.length)
+            else -> digits.substring(0, decimalIndex) + "." + digits.substring(decimalIndex)
+        }
+        return DecimalValue.parse(plain)
     }
 
     private fun encode(value: String): String = value.encodeToByteArray().joinToString("") { byte ->

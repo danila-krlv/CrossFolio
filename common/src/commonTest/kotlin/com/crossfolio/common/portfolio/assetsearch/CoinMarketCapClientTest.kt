@@ -1,6 +1,7 @@
 package com.crossfolio.common.portfolio.assetsearch
 
 import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.core.decimal.DecimalValue
 import com.crossfolio.common.core.network.CoinMarketCapClient
 import com.crossfolio.common.core.network.HttpRequest
 import com.crossfolio.common.core.network.HttpResponse
@@ -174,6 +175,11 @@ class CoinMarketCapClientTest {
     fun quotesAndPublicImagesUseSharedClient() {
         val transport = FakeTransport()
         val client = CoinMarketCapClient(transport) { "placeholder" }
+        client.fetchMarketPrice(Asset("1", "BTC")) {
+            assertEquals(DecimalValue("0.000000123456789123"), it.value)
+        }
+        assertTrue(transport.requests.last().url.contains("id=1&convert=USD"))
+        transport.complete(200, """{"status":{"error_code":0},"data":{"1":{"quote":{"USD":{"price":0.000000123456789123}}}}}""")
         client.fetchPriceArray("1,2", listOf("1", "2")) { assertEquals(mapOf("1" to 12.5, "2" to 20.0), it.value) }
         assertTrue(transport.requests.last().url.contains("id=1%2C2&convert=USD"))
         transport.complete(200, """{"status":{"error_code":0},"data":{"1":{"quote":{"USD":{"price":12.5}}},"2":{"quote":{"USD":{"price":20}}}}}""")
@@ -185,6 +191,24 @@ class CoinMarketCapClientTest {
         transport.callback(NetworkResult(HttpResponse(200, byteArrayOf(0, -1, 127)), null))
         client.fetchMap { assertEquals(NetworkFailure.TRANSPORT, it.failure) }
         transport.callback(NetworkResult(null, "Network request failed", NetworkFailure.TRANSPORT))
+    }
+
+    @Test
+    fun decodesScientificMarketPriceWithoutLosingPrecision() {
+        val transport = FakeTransport()
+        val client = CoinMarketCapClient(transport) { "placeholder" }
+        client.fetchMarketPrice(Asset("1", "BTC")) {
+            assertEquals(DecimalValue("0.000000123456789123"), it.value)
+        }
+
+        transport.complete(200, """{"status":{"error_code":0},"data":{"1":{"quote":{"USD":{
+            "price":1.23456789123e-7}}}}}""")
+
+        client.fetchPriceArray("1", listOf("1")) {
+            assertEquals(1.23456789123e-7, it.value?.get("1"))
+        }
+        transport.complete(200, """{"status":{"error_code":0},"data":{"1":{"quote":{"USD":{
+            "price":1.23456789123e-7}}}}}""")
     }
 }
 

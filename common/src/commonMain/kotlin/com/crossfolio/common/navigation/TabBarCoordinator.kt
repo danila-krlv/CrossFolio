@@ -93,7 +93,7 @@ class TabBarCoordinator(
     private fun failureMessage(failure: NetworkFailure?, checkingKey: Boolean): String = when (failure) {
         NetworkFailure.TRANSPORT -> if (checkingKey)
             "Не удалось проверить API-ключ. Проверьте подключение к интернету."
-            else "Не удалось загрузить каталог. Проверьте подключение к интернету."
+            else "Не удалось получить данные CoinMarketCap. Проверьте подключение к интернету."
         NetworkFailure.STORAGE -> "Не удалось сохранить API-ключ. Попробуйте снова."
         NetworkFailure.INVALID_RESPONSE -> "Получен некорректный ответ CoinMarketCap. Попробуйте позже."
         else -> "Сервис CoinMarketCap временно недоступен. Попробуйте позже."

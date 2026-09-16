@@ -33,10 +33,8 @@ struct EditScreen: View {
                     }
                     decimalField("Цена приобретения, USD", field: state.price,
                                  id: .price,
-                                 hint: "Необязательно — используется \(state.marketPriceUsd.value) USD",
+                                 hint: marketPriceHint,
                                  onChange: { viewModel.setPrice(text: $0) })
-                    Text("Котировка \(state.marketPriceUsd.value) USD — временная заглушка")
-                        .font(.caption).foregroundStyle(.secondary)
                     decimalField("Комиссия, USD", field: state.commission,
                                  id: .commission,
                                  hint: "Необязательно — по умолчанию 0 USD",
@@ -75,6 +73,15 @@ struct EditScreen: View {
             stopObserving?()
             stopObserving = nil
         }
+    }
+
+    private var marketPriceHint: String {
+        if let price = state.marketPriceUsdText {
+            return "Необязательно — используется \(price) USD"
+        }
+        return state.isMarketPriceLoading
+            ? "Загружаем котировку… Можно указать цену вручную"
+            : "Котировка недоступна — укажите цену вручную"
     }
 
     private var eventDate: Binding<Date> {

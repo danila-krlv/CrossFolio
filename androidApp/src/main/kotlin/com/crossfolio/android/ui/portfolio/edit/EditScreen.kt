@@ -81,9 +81,12 @@ fun EditScreen(viewModel: EditViewModel) {
                 }
             }
             DecimalField("Цена приобретения, USD", state.price, viewModel::setPrice,
-                "Необязательно — используется ${state.marketPriceUsd.value} USD")
-            Text("Котировка ${state.marketPriceUsd.value} USD — временная заглушка",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                when {
+                    state.marketPriceUsdText != null ->
+                        "Необязательно — используется ${state.marketPriceUsdText} USD"
+                    state.isMarketPriceLoading -> "Загружаем котировку… Можно указать цену вручную"
+                    else -> "Котировка недоступна — укажите цену вручную"
+                })
             DecimalField("Комиссия, USD", state.commission, viewModel::setCommission,
                 "Необязательно — по умолчанию 0 USD")
         }
