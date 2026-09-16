@@ -109,6 +109,21 @@ class EditViewModelTest {
         )
         assertTrue(model.state.value.canSave)
     }
+
+    @Test
+    fun marketPriceTextRoundsOnlyValuesAboveOneAndDropsTrailingZeros() {
+        fun format(value: String) = EditState(
+            occurredAtEpochMillis = 0,
+            marketPriceUsd = DecimalValue(value),
+        ).marketPriceUsdText
+
+        assertEquals("123.46", format("123.456"))
+        assertEquals("123.4", format("123.404"))
+        assertEquals("123", format("123.004"))
+        assertEquals("10", format("9.999"))
+        assertEquals("0.123456", format("0.123456"))
+        assertEquals("1", format("1"))
+    }
 }
 
 private object FixedMarketPriceSource : MarketPriceSource {

@@ -40,6 +40,14 @@ data class EditState(
     val position: PortfolioPosition? = null,
 ) {
     val canSave: Boolean get() = position != null
+    val marketPriceUsdText: String? get() = marketPriceUsd?.let(::formatMarketPrice)
+}
+
+private fun formatMarketPrice(price: DecimalValue): String {
+    if (price <= DecimalValue("1") || price.fractionDigits <= 2) return price.value
+    val fraction = price.value.substringAfter('.')
+    val shortened = DecimalValue.parse("${price.value.substringBefore('.')}.${fraction.take(2)}")
+    return if (fraction[2] >= '5') shortened.add(DecimalValue("0.01")).value else shortened.value
 }
 
 @OptIn(ExperimentalUuidApi::class)

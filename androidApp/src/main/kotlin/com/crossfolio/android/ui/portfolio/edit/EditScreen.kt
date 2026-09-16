@@ -81,11 +81,11 @@ fun EditScreen(viewModel: EditViewModel) {
                 }
             }
             DecimalField("Цена приобретения, USD", state.price, viewModel::setPrice,
-                state.marketPriceUsd?.let { "Необязательно — используется ${it.value} USD" }
+                state.marketPriceUsdText?.let { "Необязательно — используется $it USD" }
                     ?: "Введите цену вручную — котировка недоступна")
             Text(
                 when {
-                    state.marketPriceUsd != null -> "Котировка ${state.marketPriceUsd?.value} USD"
+                    state.marketPriceUsdText != null -> "Котировка ${state.marketPriceUsdText} USD"
                     state.isMarketPriceLoading -> "Загрузка котировки…"
                     else -> "Котировка недоступна"
                 },
