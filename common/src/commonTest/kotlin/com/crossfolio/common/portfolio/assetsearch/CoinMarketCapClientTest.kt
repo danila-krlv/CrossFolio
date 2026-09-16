@@ -203,6 +203,12 @@ class CoinMarketCapClientTest {
 
         transport.complete(200, """{"status":{"error_code":0},"data":{"1":{"quote":{"USD":{
             "price":1.23456789123e-7}}}}}""")
+
+        client.fetchPriceArray("1", listOf("1")) {
+            assertEquals(1.23456789123e-7, it.value?.get("1"))
+        }
+        transport.complete(200, """{"status":{"error_code":0},"data":{"1":{"quote":{"USD":{
+            "price":1.23456789123e-7}}}}}""")
     }
 }
 

@@ -8,7 +8,6 @@ import com.crossfolio.common.core.market.MarketPriceSource
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -44,13 +43,17 @@ class CoinMarketCapClient(
 
     fun fetchPriceArray(idString: String, idArray: List<String>,
         completion: (NetworkResult<Map<String, Double>>) -> Unit) {
-        request("v2/cryptocurrency/quotes/latest?id=${encode(idString)}&convert=USD", { payload ->
-            val data = payload.getValue("data").jsonObject
-            idArray.associateWith {
-                data.getValue(it).jsonObject.getValue("quote").jsonObject.getValue("USD")
-                    .jsonObject.getValue("price").jsonPrimitive.double.also { price -> require(price.isFinite()) }
+        fetchMarketPrices(idString, idArray) { result ->
+            val prices = result.value
+            if (prices == null) {
+                completion(NetworkResult(null, result.error, result.failure))
+                return@fetchMarketPrices
             }
-        }, completion)
+            val doubles = runCatching {
+                prices.mapValues { (_, price) -> price.value.toDouble().also { require(it.isFinite()) } }
+            }.getOrNull()
+            completion(if (doubles == null) invalidResponse() else NetworkResult(doubles, null))
+        }
     }
 
     override fun fetchMarketPrice(asset: Asset, completion: (NetworkResult<DecimalValue>) -> Unit) {
@@ -60,11 +63,26 @@ class CoinMarketCapClient(
             completion(invalidResponse())
             return
         }
-        request("v2/cryptocurrency/quotes/latest?id=${encode(id)}&convert=USD", { payload ->
-            val price = payload.getValue("data").jsonObject.getValue(id).jsonObject
-                .getValue("quote").jsonObject.getValue("USD").jsonObject
-                .getValue("price").jsonPrimitive
-            parseJsonDecimal(price.content).also { require(!it.isZero) }
+        fetchMarketPrices(id, listOf(id)) { result ->
+            val price = result.value?.get(id)
+            if (price == null) completion(NetworkResult(null, result.error, result.failure))
+            else completion(NetworkResult(price, null))
+        }
+    }
+
+    private fun fetchMarketPrices(
+        idString: String,
+        ids: List<String>,
+        completion: (NetworkResult<Map<String, DecimalValue>>) -> Unit,
+    ) {
+        request("v2/cryptocurrency/quotes/latest?id=${encode(idString)}&convert=USD", { payload ->
+            val data = payload.getValue("data").jsonObject
+            ids.associateWith { id ->
+                val price = data.getValue(id).jsonObject
+                    .getValue("quote").jsonObject.getValue("USD").jsonObject
+                    .getValue("price").jsonPrimitive
+                parseJsonDecimal(price.content).also { require(!it.isZero) }
+            }
         }, completion)
     }
 
