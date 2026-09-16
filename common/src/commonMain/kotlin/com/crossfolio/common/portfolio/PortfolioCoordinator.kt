@@ -40,6 +40,7 @@ class PortfolioCoordinator(
 ) {
     private val _state = MutableStateFlow(PortfolioNavigationState())
     val state: StateFlow<PortfolioNavigationState> = _state.asStateFlow()
+    private var editSession: Any? = null
     var editViewModel: EditViewModel? = null
         private set
 
@@ -62,6 +63,7 @@ class PortfolioCoordinator(
     }
 
     fun resetNavigation() {
+        editSession = null
         editViewModel = null
         assetSearchViewModel.resetCatalog()
         _state.value = PortfolioNavigationState(isSearchEnabled = _state.value.isSearchEnabled)
@@ -69,6 +71,7 @@ class PortfolioCoordinator(
 
     fun openAssetSearch() {
         if (!_state.value.isSearchEnabled) return
+        editSession = null
         editViewModel = null
         _state.value = _state.value.copy(backStack = listOf(PortfolioRoute.PORTFOLIO, PortfolioRoute.ASSET_SEARCH))
         assetSearchViewModel.loadCatalog()
@@ -83,11 +86,15 @@ class PortfolioCoordinator(
 
     private fun openEdit(asset: Asset) {
         if (!_state.value.isSearchEnabled || _state.value.currentRoute != PortfolioRoute.ASSET_SEARCH) return
+        val session = Any()
+        editSession = session
         editViewModel = EditViewModel(
             asset,
             ::navigateBack,
             marketPriceSource = marketPriceSource,
-            onMarketPriceFailed = { onNetworkFailure(it) },
+            onMarketPriceFailed = { failure ->
+                if (editSession === session) onNetworkFailure(failure)
+            },
         )
         _state.value = _state.value.copy(backStack = _state.value.backStack + PortfolioRoute.EDIT)
         editViewModel?.fetchMarketPrice()
@@ -96,6 +103,7 @@ class PortfolioCoordinator(
     private fun navigateBack() {
         val backStack = _state.value.backStack
         if (backStack.size > 1) {
+            editSession = null
             editViewModel = null
             _state.value = _state.value.copy(backStack = backStack.dropLast(1))
         }

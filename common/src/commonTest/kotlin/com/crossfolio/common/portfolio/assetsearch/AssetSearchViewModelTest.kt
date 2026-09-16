@@ -2,6 +2,9 @@ package com.crossfolio.common.portfolio.assetsearch
 
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.asset.AssetCatalog
+import com.crossfolio.common.core.decimal.DecimalValue
+import com.crossfolio.common.core.market.MarketPriceSource
+import com.crossfolio.common.core.network.NetworkFailure
 import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.PortfolioCoordinator
 import com.crossfolio.common.portfolio.PortfolioRoute
@@ -41,6 +44,25 @@ class AssetSearchViewModelTest {
         assertEquals(searchState, search.state.value)
         assertEquals(requestCount, network.mapRequests)
         assertNull(coordinator.editViewModel)
+    }
+
+    @Test
+    fun ignoresMarketPriceFailureAfterLeavingEdit() {
+        val network = FakeNetwork()
+        val prices = ManualMarketPriceSource()
+        val coordinator = PortfolioCoordinator(assetCatalog = network, marketPriceSource = prices)
+        var reportedFailure: NetworkFailure? = null
+        coordinator.onNetworkFailure = { reportedFailure = it }
+        coordinator.setSearchEnabled(true)
+        coordinator.openAssetSearch()
+        network.complete(NetworkResult(catalog, null))
+
+        coordinator.assetSearchViewModel.selectAsset(catalog.first())
+        requireNotNull(coordinator.editViewModel).onBack()
+        prices.fail(NetworkFailure.TRANSPORT)
+
+        assertNull(reportedFailure)
+        assertEquals(PortfolioRoute.ASSET_SEARCH, coordinator.state.value.currentRoute)
     }
 
     @Test
@@ -176,4 +198,16 @@ private class FakeNetwork : AssetCatalog {
         completion(imageResult)
     }
 
+}
+
+private class ManualMarketPriceSource : MarketPriceSource {
+    private lateinit var completion: (NetworkResult<DecimalValue>) -> Unit
+
+    override fun fetchMarketPrice(asset: Asset, completion: (NetworkResult<DecimalValue>) -> Unit) {
+        this.completion = completion
+    }
+
+    fun fail(failure: NetworkFailure) {
+        completion(NetworkResult(null, "Price unavailable", failure))
+    }
 }
