@@ -19,7 +19,6 @@ kotlin {
     listOf(
         iosArm64(),
         iosSimulatorArm64(),
-        macosArm64(),
     ).forEach { target ->
         target.binaries.framework {
             baseName = "Common"
@@ -28,12 +27,33 @@ kotlin {
         }
     }
 
+    val macosTarget = macosArm64()
+    macosTarget.binaries.all {
+        linkerOpts("-lsqlite3")
+    }
+    macosTarget.binaries.framework {
+        baseName = "Common"
+        isStatic = true
+        xcf.add(this)
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.androidx.room.runtime)
+        }
+
+        androidMain.dependencies {
             implementation(libs.androidx.sqlite.bundled)
+        }
+
+        iosMain.dependencies {
+            implementation(libs.androidx.sqlite.bundled)
+        }
+
+        macosMain.dependencies {
+            implementation(libs.androidx.sqlite.framework)
         }
 
         commonTest.dependencies {

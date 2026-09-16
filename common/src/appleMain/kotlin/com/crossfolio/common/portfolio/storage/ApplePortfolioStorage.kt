@@ -1,6 +1,7 @@
 package com.crossfolio.common.portfolio.storage
 
 import androidx.room3.Room
+import androidx.sqlite.SQLiteDriver
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSFileManager
@@ -12,7 +13,10 @@ fun createApplePortfolioStorage(): PortfolioStorage =
 
 fun createApplePortfolioStorage(databasePath: String): PortfolioStorage = createRoomPortfolioStorage(
     Room.databaseBuilder<PortfolioDatabase>(name = databasePath),
+    portfolioSQLiteDriver(),
 )
+
+internal expect fun portfolioSQLiteDriver(): SQLiteDriver
 
 @OptIn(ExperimentalForeignApi::class)
 private fun defaultPortfolioDatabasePath(): String {

@@ -2,6 +2,7 @@ package com.crossfolio.common.portfolio.storage
 
 import android.content.Context
 import androidx.room3.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 
 fun createAndroidPortfolioStorage(
     context: Context,
@@ -14,5 +15,6 @@ fun createAndroidPortfolioStorage(
             context = appContext,
             name = databasePath,
         ),
+        BundledSQLiteDriver(),
     )
 }

@@ -1,7 +1,7 @@
 package com.crossfolio.common.portfolio.storage
 
 import androidx.room3.RoomDatabase
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.SQLiteDriver
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.asset.AssetIdentity
 import com.crossfolio.common.core.asset.SearchPlatform
@@ -17,9 +17,10 @@ import kotlinx.coroutines.Dispatchers
 
 internal fun createRoomPortfolioStorage(
     builder: RoomDatabase.Builder<PortfolioDatabase>,
+    driver: SQLiteDriver,
 ): PortfolioStorage = RoomPortfolioStorage(
     builder
-        .setDriver(BundledSQLiteDriver())
+        .setDriver(driver)
         .setQueryCoroutineContext(Dispatchers.Default)
         .build(),
 )
