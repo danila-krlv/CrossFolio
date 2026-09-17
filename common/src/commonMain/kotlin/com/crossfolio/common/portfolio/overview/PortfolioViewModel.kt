@@ -1,7 +1,11 @@
 package com.crossfolio.common.portfolio.overview
 
 import com.crossfolio.common.core.asset.Asset
+import com.crossfolio.common.core.asset.AssetIdentity
 import com.crossfolio.common.core.decimal.DecimalValue
+import com.crossfolio.common.core.market.AssetQuote
+import com.crossfolio.common.core.market.MarketPriceSource
+import com.crossfolio.common.core.network.NetworkFailure
 import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.model.PortfolioPosition
 import com.crossfolio.common.portfolio.storage.PortfolioStorage
@@ -12,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 
 data class PortfolioRowState(
     val position: PortfolioPosition,
@@ -52,11 +57,18 @@ class PortfolioViewModel(
     private val portfolioStorage: PortfolioStorage? = null,
     private val imageLoader: ((String, (NetworkResult<ByteArray>) -> Unit) -> Unit)? = null,
     private val logoUrlProvider: (Asset) -> String? = { null },
+    private val marketPriceSource: MarketPriceSource? = null,
+    private val canRefreshPrices: () -> Boolean = { true },
+    private val onMarketPriceFailed: (NetworkFailure?) -> Unit = {},
+    private val nowEpochMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) {
     private val _state = MutableStateFlow(PortfolioState())
     val state: StateFlow<PortfolioState> = _state.asStateFlow()
     private val scope = CoroutineScope(Dispatchers.Main.immediate)
     private var loadRequest = 0
+    private var priceGeneration = 0
+    private val inFlight = mutableSetOf<AssetIdentity>()
+    private val failedAt = mutableMapOf<AssetIdentity, Long>()
 
     init {
         loadPositions()
@@ -85,10 +97,65 @@ class PortfolioViewModel(
             val result = storage.loadPositions()
             if (request != loadRequest) return@launch
             _state.value = _state.value.copy(
-                positions = result.value ?: _state.value.positions,
+                positions = result.value?.map { loaded ->
+                    val currentQuote = _state.value.positions.find { it.asset.identity == loaded.asset.identity }?.latestQuote
+                    if (currentQuote != null && currentQuote.receivedAtEpochMillis >
+                        (loaded.latestQuote?.receivedAtEpochMillis ?: Long.MIN_VALUE)) {
+                        PortfolioPosition(loaded.asset, loaded.operations, currentQuote)
+                    } else loaded
+                } ?: _state.value.positions,
                 isLoading = false,
                 storageFailure = result.failure,
             )
+            if (result.value != null) refreshPrices()
+        }
+    }
+
+    internal fun invalidatePriceRequests() {
+        priceGeneration++
+        inFlight.clear()
+        failedAt.clear()
+    }
+
+    private fun refreshPrices() {
+        val source = marketPriceSource ?: return
+        if (!canRefreshPrices()) return
+        val generation = priceGeneration
+        for (position in _state.value.positions) {
+            if (generation != priceGeneration || !canRefreshPrices()) break
+            val identity = position.asset.identity
+            val now = nowEpochMillis()
+            if (position.latestQuote?.let { now - it.receivedAtEpochMillis < 600_000 } == true ||
+                failedAt[identity]?.let { now - it < 60_000 } == true ||
+                !inFlight.add(identity)) continue
+            source.fetchMarketPrice(position.asset) { result ->
+                if (generation != priceGeneration) return@fetchMarketPrice
+                val price = result.value
+                if (price == null) {
+                    inFlight.remove(identity)
+                    if (result.failure != NetworkFailure.STALE_RESPONSE) {
+                        failedAt[identity] = nowEpochMillis()
+                        onMarketPriceFailed(result.failure)
+                    }
+                    return@fetchMarketPrice
+                }
+                val quote = AssetQuote(identity, price, nowEpochMillis())
+                scope.launch {
+                    val saved = portfolioStorage?.saveLastQuote(quote)
+                    if (generation != priceGeneration) return@launch
+                    inFlight.remove(identity)
+                    failedAt.remove(identity)
+                    _state.value = _state.value.copy(
+                        positions = _state.value.positions.map { current ->
+                            if (current.asset.identity == identity &&
+                                (current.latestQuote?.receivedAtEpochMillis ?: Long.MIN_VALUE) <= quote.receivedAtEpochMillis) {
+                                PortfolioPosition(current.asset, current.operations, quote)
+                            } else current
+                        },
+                        storageFailure = saved?.failure ?: _state.value.storageFailure,
+                    )
+                }
+            }
         }
     }
 

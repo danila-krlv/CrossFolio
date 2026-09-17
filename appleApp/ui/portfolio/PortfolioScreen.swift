@@ -110,6 +110,12 @@ struct PortfolioScreen: View {
             .accessibilityLabel("Добавить актив")
             .padding(24)
         }
+        #if os(iOS)
+        .onAppear { coordinator.portfolioViewModel.loadPositions() }
+        .onChange(of: isSearchEnabled) { _, _ in
+            coordinator.portfolioViewModel.loadPositions()
+        }
+        #endif
     }
 
     private var assetSearchContent: some View {

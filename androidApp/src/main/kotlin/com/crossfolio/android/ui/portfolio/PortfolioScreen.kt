@@ -18,6 +18,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -47,6 +48,7 @@ fun PortfolioScreen(coordinator: PortfolioCoordinator) {
 @Composable
 private fun PortfolioContent(viewModel: PortfolioViewModel, isSearchEnabled: Boolean) {
     val state by viewModel.state.collectAsState()
+    LaunchedEffect(viewModel, isSearchEnabled) { viewModel.loadPositions() }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
