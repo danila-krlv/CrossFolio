@@ -49,6 +49,8 @@ class PortfolioCoordinator(
     val portfolioViewModel = PortfolioViewModel(
         onAssetSearchRequested = ::openAssetSearch,
         portfolioStorage = portfolioStorage,
+        imageLoader = imageLoader,
+        logoUrlProvider = logoUrlProvider,
     )
     val assetSearchViewModel = AssetSearchViewModel(
         onBackRequested = ::navigateBack,

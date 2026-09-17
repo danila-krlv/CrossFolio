@@ -1,6 +1,8 @@
 package com.crossfolio.common.portfolio.overview
 
+import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.decimal.DecimalValue
+import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.model.PortfolioPosition
 import com.crossfolio.common.portfolio.storage.PortfolioStorage
 import com.crossfolio.common.portfolio.storage.StorageFailure
@@ -48,6 +50,8 @@ private fun DecimalValue.formatUsd(): String {
 class PortfolioViewModel(
     private val onAssetSearchRequested: () -> Unit,
     private val portfolioStorage: PortfolioStorage? = null,
+    private val imageLoader: ((String, (NetworkResult<ByteArray>) -> Unit) -> Unit)? = null,
+    private val logoUrlProvider: (Asset) -> String? = { null },
 ) {
     private val _state = MutableStateFlow(PortfolioState())
     val state: StateFlow<PortfolioState> = _state.asStateFlow()
@@ -60,6 +64,17 @@ class PortfolioViewModel(
 
     fun onAssetSearch() {
         onAssetSearchRequested()
+    }
+
+    fun logoUrl(asset: Asset): String? = logoUrlProvider(asset)
+
+    fun loadImage(url: String, completion: (NetworkResult<ByteArray>) -> Unit) {
+        val loader = imageLoader
+        if (loader == null) {
+            completion(NetworkResult(null, "Network manager is unavailable"))
+        } else {
+            loader(url, completion)
+        }
     }
 
     fun loadPositions() {
@@ -75,5 +90,10 @@ class PortfolioViewModel(
                 storageFailure = result.failure,
             )
         }
+    }
+
+    fun observeState(observer: (PortfolioState) -> Unit): () -> Unit {
+        val job = CoroutineScope(Dispatchers.Main.immediate).launch { state.collect { observer(it) } }
+        return { job.cancel() }
     }
 }

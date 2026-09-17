@@ -89,7 +89,7 @@ private struct AssetSearchRow: View {
     }
 }
 
-private struct AssetLogo: View {
+struct AssetLogo: View {
     let url: String?
     @State private var image: Image?
     @State private var isLoading = false
