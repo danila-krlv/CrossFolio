@@ -16,6 +16,10 @@ class PortfolioPositionTest {
     @Test
     fun exactDecimalsAndHistoryPreserveZeroPosition() {
         assertEquals(DecimalValue("0.3"), DecimalValue("0.1").add(DecimalValue("0.2")))
+        assertEquals(DecimalValue("246.913578"), DecimalValue("123.456789").multiply(DecimalValue("2")))
+        assertEquals(DecimalValue("0.02"), DecimalValue("0.1").multiply(DecimalValue("0.2")))
+        assertEquals(DecimalValue("9801"), DecimalValue("99").multiply(DecimalValue("99")))
+        assertEquals(DecimalValue.ZERO, DecimalValue.ZERO.multiply(DecimalValue("999.99")))
         assertEquals(DecimalValue("999.99"), DecimalValue("1000").subtract(DecimalValue("0.01")))
         assertEquals(DecimalValue("1000"), DecimalValue("999.99").add(DecimalValue("0.01")))
         assertEquals(DecimalValue("1.2"), DecimalValue.parse("001.200"))
