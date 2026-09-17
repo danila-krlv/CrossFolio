@@ -43,13 +43,14 @@ data class PortfolioState(
 }
 
 private fun DecimalValue.formatUsd(): String {
+    if (!isZero && this < DecimalValue("0.01")) return "<\$0.01"
     val whole = value.substringBefore('.')
     val fraction = value.substringAfter('.', "")
     val cents = fraction.padEnd(3, '0')
     val rounded = DecimalValue.parse("$whole.${cents.take(2)}").let { truncated ->
         if (cents[2] >= '5') truncated.add(DecimalValue("0.01")) else truncated
     }
-    return rounded.value.substringBefore('.') + "." + rounded.value.substringAfter('.', "").padEnd(2, '0')
+    return "\$" + rounded.value.substringBefore('.') + "." + rounded.value.substringAfter('.', "").padEnd(2, '0')
 }
 
 class PortfolioViewModel(

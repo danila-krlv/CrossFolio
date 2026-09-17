@@ -62,7 +62,7 @@ struct PortfolioScreen: View {
                     Text("Стоимость портфеля")
                         .font(.headline)
                         .foregroundStyle(.secondary)
-                    Text("$\(portfolioState.totalValueUsdText)")
+                    Text(portfolioState.totalValueUsdText)
                         .font(.largeTitle.weight(.semibold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
@@ -152,7 +152,7 @@ private struct PortfolioRow: View {
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
-            Text("$\(row.valueUsdText)")
+            Text(row.valueUsdText)
                 .font(.headline)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)

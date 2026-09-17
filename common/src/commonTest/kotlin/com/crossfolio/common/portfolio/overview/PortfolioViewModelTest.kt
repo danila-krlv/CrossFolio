@@ -102,11 +102,11 @@ class PortfolioViewModelTest {
         val state = PortfolioViewModel({}, storage).state.value
 
         assertEquals(DecimalValue("123.46296183945"), state.rows[0].valueUsd)
-        assertEquals("123.46", state.rows[0].valueUsdText)
+        assertEquals("\$123.46", state.rows[0].valueUsdText)
         assertEquals(DecimalValue("2"), state.rows[1].valueUsd)
-        assertEquals("2.00", state.rows[1].valueUsdText)
+        assertEquals("\$2.00", state.rows[1].valueUsdText)
         assertEquals(DecimalValue("125.46296183945"), state.totalValueUsd)
-        assertEquals("125.46", state.totalValueUsdText)
+        assertEquals("\$125.46", state.totalValueUsdText)
     }
 
     @Test
@@ -116,8 +116,34 @@ class PortfolioViewModelTest {
             portfolioStorage = PortfolioStorageFake(listOf(position("1", "TEST", "1", "1.005"))),
         ).state.value
 
-        assertEquals("1.01", state.rows.single().valueUsdText)
-        assertEquals("1.01", state.totalValueUsdText)
+        assertEquals("\$1.01", state.rows.single().valueUsdText)
+        assertEquals("\$1.01", state.totalValueUsdText)
+    }
+
+    @Test
+    fun distinguishesZeroAndSubCentValuesWithoutRoundingStoredValues() {
+        for ((value, text) in listOf("0" to "\$0.00", "0.00000001" to "<\$0.01",
+            "0.00999" to "<\$0.01", "0.01" to "\$0.01", "0.015" to "\$0.02",
+            "9.999" to "\$10.00")) {
+            val position = if (value == "0") PortfolioPosition(Asset("1", "TEST"))
+                else position("1", "TEST", value, "1")
+            val state = PortfolioState(positions = listOf(position))
+            assertEquals(text, state.rows.single().valueUsdText)
+            assertEquals(text, state.totalValueUsdText)
+            assertEquals(DecimalValue(value), state.totalValueUsd)
+        }
+        assertEquals("\$0.00", PortfolioState().totalValueUsdText)
+    }
+
+    @Test
+    fun roundsTotalAfterAddingExactPositionValues() {
+        val state = PortfolioState(positions = listOf(
+            position("1", "ONE", "1", "1.004"),
+            position("2", "TWO", "1", "1.004"),
+        ))
+        assertEquals(listOf("\$1.00", "\$1.00"), state.rows.map { it.valueUsdText })
+        assertEquals("\$2.01", state.totalValueUsdText)
+        assertEquals(DecimalValue("2.008"), state.totalValueUsd)
     }
 
     private fun position(id: String, ticker: String, quantity: String, quote: String?): PortfolioPosition {

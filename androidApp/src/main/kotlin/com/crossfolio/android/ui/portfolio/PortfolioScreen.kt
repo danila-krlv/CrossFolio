@@ -62,7 +62,7 @@ private fun PortfolioContent(viewModel: PortfolioViewModel, isSearchEnabled: Boo
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "\$${state.totalValueUsdText}",
+                    text = state.totalValueUsdText,
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -135,7 +135,7 @@ private fun PortfolioRow(row: PortfolioRowState, viewModel: PortfolioViewModel) 
             )
         }
         Text(
-            text = "\$${row.valueUsdText}",
+            text = row.valueUsdText,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Medium,
         )
