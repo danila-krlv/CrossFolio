@@ -49,6 +49,11 @@ class PortfolioCoordinator(
     val portfolioViewModel = PortfolioViewModel(
         onAssetSearchRequested = ::openAssetSearch,
         portfolioStorage = portfolioStorage,
+        imageLoader = imageLoader,
+        logoUrlProvider = logoUrlProvider,
+        marketPriceSource = marketPriceSource,
+        canRefreshPrices = { _state.value.isSearchEnabled },
+        onMarketPriceFailed = { onNetworkFailure(it) },
     )
     val assetSearchViewModel = AssetSearchViewModel(
         onBackRequested = ::navigateBack,
@@ -62,10 +67,12 @@ class PortfolioCoordinator(
     internal var onNetworkFailure: (NetworkFailure?) -> Unit = {}
 
     internal fun setSearchEnabled(enabled: Boolean) {
+        if (!enabled && _state.value.isSearchEnabled) portfolioViewModel.invalidatePriceRequests()
         _state.value = _state.value.copy(isSearchEnabled = enabled)
     }
 
     fun resetNavigation() {
+        portfolioViewModel.invalidatePriceRequests()
         editSession = null
         editViewModel = null
         assetSearchViewModel.resetCatalog()

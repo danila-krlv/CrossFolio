@@ -18,6 +18,26 @@ data class DecimalValue(val value: String) : Comparable<DecimalValue> {
 
     fun add(other: DecimalValue): DecimalValue = calculate(other, subtract = false)
 
+    fun multiply(other: DecimalValue): DecimalValue {
+        if (isZero || other.isZero) return ZERO
+        val left = value.replace(".", "")
+        val right = other.value.replace(".", "")
+        val result = IntArray(left.length + right.length)
+        for (leftIndex in left.indices.reversed()) {
+            for (rightIndex in right.indices.reversed()) {
+                val index = leftIndex + rightIndex + 1
+                val product = left[leftIndex].digitToInt() * right[rightIndex].digitToInt() + result[index]
+                result[index] = product % 10
+                result[index - 1] += product / 10
+            }
+        }
+        val scale = fractionDigits + other.fractionDigits
+        val digits = result.joinToString("").trimStart('0').padStart(scale + 1, '0')
+        return parse(if (scale == 0) digits else {
+            digits.dropLast(scale) + "." + digits.takeLast(scale)
+        })
+    }
+
     fun subtract(other: DecimalValue): DecimalValue {
         require(this >= other) { "Decimal result must not be negative" }
         return calculate(other, subtract = true)
