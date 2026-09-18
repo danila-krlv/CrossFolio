@@ -40,8 +40,23 @@ struct EditScreen: View {
                                  hint: "Необязательно — по умолчанию 0 USD",
                                  onChange: { viewModel.setCommission(text: $0) })
                 }
+                #if os(macOS)
+                .frame(maxWidth: 560, alignment: .leading)
+                #else
                 .frame(maxWidth: .infinity, alignment: .leading)
+                #endif
                 .padding(16)
+                .frame(maxWidth: .infinity)
+                .disabled(state.isSaving)
+                if state.isSaving {
+                    ProgressView("Сохранение…")
+                }
+                if state.storageFailure != nil {
+                    Text("Не удалось сохранить операцию. Попробуйте сохранить ещё раз.")
+                        .foregroundStyle(.red)
+                        .padding()
+                        .accessibilityIdentifier("saveError")
+                }
             }
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Добавить актив")
@@ -53,9 +68,17 @@ struct EditScreen: View {
                     Button { viewModel.onBack() } label: {
                         Label("Назад", systemImage: "chevron.left")
                     }
+                    .disabled(state.isSaving)
+                    #if os(macOS)
+                    .keyboardShortcut(.escape, modifiers: [])
+                    #endif
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { viewModel.save() }.disabled(!state.canSave)
+                    Button("Сохранить") { viewModel.save() }
+                        .disabled(!state.canSave || state.isSaving)
+                        #if os(macOS)
+                        .keyboardShortcut("s", modifiers: .command)
+                        #endif
                 }
                 #if os(iOS)
                 ToolbarItemGroup(placement: .keyboard) {
@@ -68,6 +91,9 @@ struct EditScreen: View {
         .onAppear {
             stopObserving?()
             stopObserving = viewModel.observeState { state = $0 }
+            #if os(macOS)
+            focusedField = .quantity
+            #endif
         }
         .onDisappear {
             stopObserving?()
