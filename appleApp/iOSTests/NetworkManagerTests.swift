@@ -1,6 +1,8 @@
 import Common
 import XCTest
+#if os(iOS)
 @testable import CrossFolio_iOS
+#endif
 
 final class NetworkManagerTests: XCTestCase {
     func testCatalogUsesCurrentKeyAndKeepsAssetsWithSameTicker() {

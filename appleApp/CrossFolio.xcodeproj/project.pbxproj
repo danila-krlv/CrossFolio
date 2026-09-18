@@ -24,13 +24,22 @@
 		100000000000000000000015 /* AppleProfileStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000012 /* AppleProfileStorage.swift */; };
 		100000000000000000000016 /* AppleProfileStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000012 /* AppleProfileStorage.swift */; };
 		100000000000000000000017 /* ProfileStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000013 /* ProfileStorageTests.swift */; };
+		100000000000000000000025 /* ProfileStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000013 /* ProfileStorageTests.swift */; };
 		100000000000000000000018 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000015 /* NetworkManager.swift */; };
 		100000000000000000000019 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000015 /* NetworkManager.swift */; };
 		100000000000000000000020 /* NetworkManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000016 /* NetworkManagerTests.swift */; };
+		100000000000000000000026 /* NetworkManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000016 /* NetworkManagerTests.swift */; };
 		100000000000000000000021 /* AssetSearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000017 /* AssetSearchScreen.swift */; };
 		100000000000000000000022 /* AssetSearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000017 /* AssetSearchScreen.swift */; };
 		100000000000000000000023 /* EditScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000018 /* EditScreen.swift */; };
 		100000000000000000000024 /* EditScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000018 /* EditScreen.swift */; };
+		100000000000000000000027 = {isa = PBXBuildFile; fileRef = 200000000000000000000012; };
+		100000000000000000000028 = {isa = PBXBuildFile; fileRef = 200000000000000000000015; };
+		100000000000000000000029 = {isa = PBXBuildFile; fileRef = 200000000000000000000009; };
+		100000000000000000000030 = {isa = PBXBuildFile; fileRef = 200000000000000000000017; };
+		100000000000000000000031 = {isa = PBXBuildFile; fileRef = 200000000000000000000018; };
+		100000000000000000000032 = {isa = PBXBuildFile; fileRef = 200000000000000000000003; };
+		100000000000000000000033 /* PortfolioScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000020 /* PortfolioScreenTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,6 +49,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 500000000000000000000001;
 			remoteInfo = "CrossFolio iOS";
+		};
+		D00000000000000000000003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 500000000000000000000002;
+			remoteInfo = "CrossFolio macOS";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -58,10 +74,12 @@
 		200000000000000000000012 /* AppleProfileStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleProfileStorage.swift; sourceTree = "<group>"; };
 		200000000000000000000013 /* ProfileStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStorageTests.swift; sourceTree = "<group>"; };
 		200000000000000000000014 /* CrossFolio iOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "CrossFolio iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000019 /* CrossFolio macOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "CrossFolio macOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		200000000000000000000015 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
 		200000000000000000000016 /* NetworkManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManagerTests.swift; sourceTree = "<group>"; };
 		200000000000000000000017 /* AssetSearchScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetSearchScreen.swift; sourceTree = "<group>"; };
 		200000000000000000000018 /* EditScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditScreen.swift; sourceTree = "<group>"; };
+		200000000000000000000020 /* PortfolioScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macOSTests/PortfolioScreenTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,6 +106,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		300000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000032,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -101,6 +127,7 @@
 				400000000000000000000005 /* Frameworks */,
 				400000000000000000000006 /* Products */,
 				400000000000000000000007 /* iOSTests */,
+				200000000000000000000020 /* PortfolioScreenTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -147,6 +174,7 @@
 				200000000000000000000006 /* CrossFolio iOS.app */,
 				200000000000000000000007 /* CrossFolio macOS.app */,
 				200000000000000000000014 /* CrossFolio iOSTests.xctest */,
+				200000000000000000000019 /* CrossFolio macOSTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -274,6 +302,24 @@
 			productReference = 200000000000000000000014 /* CrossFolio iOSTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		500000000000000000000004 /* CrossFolio macOSTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 600000000000000000000005 /* Build configuration list for PBXNativeTarget "CrossFolio macOSTests" */;
+			buildPhases = (
+				800000000000000000000004 /* Sources */,
+				300000000000000000000004 /* Frameworks */,
+				900000000000000000000004 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D00000000000000000000004 /* PBXTargetDependency */,
+			);
+			name = "CrossFolio macOSTests";
+			productName = "CrossFolio macOSTests";
+			productReference = 200000000000000000000019 /* CrossFolio macOSTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -312,6 +358,7 @@
 				500000000000000000000001 /* CrossFolio iOS */,
 				500000000000000000000002 /* CrossFolio macOS */,
 				500000000000000000000003 /* CrossFolio iOSTests */,
+				500000000000000000000004 /* CrossFolio macOSTests */,
 			);
 		};
 /* End PBXProject section */
@@ -332,6 +379,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		900000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		900000000000000000000004 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -425,6 +479,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		800000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000027,
+				100000000000000000000028,
+				100000000000000000000029,
+				100000000000000000000030,
+				100000000000000000000031,
+				100000000000000000000025 /* ProfileStorageTests.swift in Sources */,
+				100000000000000000000026 /* NetworkManagerTests.swift in Sources */,
+				100000000000000000000033 /* PortfolioScreenTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -432,6 +501,11 @@
 			isa = PBXTargetDependency;
 			target = 500000000000000000000001 /* CrossFolio iOS */;
 			targetProxy = D00000000000000000000001 /* PBXContainerItemProxy */;
+		};
+		D00000000000000000000004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 500000000000000000000002 /* CrossFolio macOS */;
+			targetProxy = D00000000000000000000003 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -562,6 +636,22 @@
 			};
 			name = Debug;
 		};
+		B00000000000000000000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				ARCHS = arm64;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.crossfolio.macos.tests;
+				DEAD_CODE_STRIPPING = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
 		B00000000000000000000008 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -575,6 +665,22 @@
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CrossFolio iOS.app/CrossFolio iOS";
+			};
+			name = Release;
+		};
+		B00000000000000000000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				ARCHS = arm64;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.crossfolio.macos.tests;
+				DEAD_CODE_STRIPPING = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -613,6 +719,15 @@
 			buildConfigurations = (
 				B00000000000000000000007 /* Debug */,
 				B00000000000000000000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		600000000000000000000005 /* Build configuration list for PBXNativeTarget "CrossFolio macOSTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B00000000000000000000009 /* Debug */,
+				B00000000000000000000010 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
