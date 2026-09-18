@@ -40,6 +40,11 @@ struct ProfileScreen: View {
                     else { viewModel.finishApiKeyEditing() }
                 }
         }
+        #if os(macOS)
+        .formStyle(.grouped)
+        .frame(maxWidth: 640)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        #endif
         .onAppear {
             stopObservingKey?()
             stopObservingKey = viewModel.apiKeyInteractor.observeState { state in

@@ -42,8 +42,17 @@ struct CrossFolioApp: App {
     private let appContainer = AppContainer()
 
     var body: some Scene {
+        #if os(macOS)
+        Window("CrossFolio", id: "main") {
+            ContentView(coordinator: appContainer.tabBarCoordinator)
+                .frame(minWidth: 720, minHeight: 520)
+        }
+        .defaultSize(width: 1000, height: 700)
+        .windowResizability(.contentMinSize)
+        #else
         WindowGroup {
             ContentView(coordinator: appContainer.tabBarCoordinator)
         }
+        #endif
     }
 }
