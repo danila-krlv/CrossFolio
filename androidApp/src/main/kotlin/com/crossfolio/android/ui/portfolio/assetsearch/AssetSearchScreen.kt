@@ -1,5 +1,6 @@
 package com.crossfolio.android.ui.portfolio.assetsearch
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import com.crossfolio.common.portfolio.assetsearch.AssetSearchViewModel
 @Composable
 fun AssetSearchScreen(viewModel: AssetSearchViewModel) {
     val state by viewModel.state.collectAsState()
+    BackHandler(onBack = viewModel::onBack)
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
