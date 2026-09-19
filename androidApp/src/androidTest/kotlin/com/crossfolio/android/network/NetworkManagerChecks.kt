@@ -4,6 +4,8 @@ import android.os.Handler
 import android.os.Looper
 import com.crossfolio.common.core.network.CoinMarketCapClient
 import com.crossfolio.common.core.network.NetworkResult
+import com.crossfolio.common.core.network.HttpRequest
+import com.crossfolio.common.core.network.HttpResponse
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -18,7 +20,26 @@ object NetworkManagerChecks {
         imagesDoNotReadOrTransmitKey()
         failuresDoNotExposeServerOrTransportDetails()
         missingKeyAndInvalidURLDoNotOpenConnections()
-        return 5
+        imageBacklogDoesNotBlockApi()
+        return 6
+    }
+
+    private fun imageBacklogDoesNotBlockApi() {
+        val started = CountDownLatch(2)
+        val release = CountDownLatch(1)
+        val images = NetworkManager.forImages {
+            started.countDown()
+            check(release.await(5, TimeUnit.SECONDS))
+            FixtureConnection()
+        }
+        try {
+            repeat(2) { images.execute(HttpRequest("https://example.com/image.png")) {} }
+            check(started.await(5, TimeUnit.SECONDS))
+            val api = NetworkManager { FixtureConnection() }
+            check(awaitResult<HttpResponse> { api.execute(HttpRequest("https://example.com/api"), it) }.value != null)
+        } finally {
+            release.countDown()
+        }
     }
 
     private fun catalogUsesCurrentKeyAndStableIDs() {
