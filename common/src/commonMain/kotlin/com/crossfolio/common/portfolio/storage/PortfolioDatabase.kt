@@ -1,5 +1,6 @@
 package com.crossfolio.common.portfolio.storage
 
+import kotlin.time.Clock
 import androidx.room3.ConstructedBy
 import androidx.room3.Dao
 import androidx.room3.Database
@@ -13,6 +14,30 @@ import androidx.room3.Upsert
 
 @Dao
 internal abstract class PortfolioDao {
+    @Query("SELECT * FROM portfolio_snapshots ORDER BY observed_at_epoch_millis")
+    abstract suspend fun loadSnapshots(): List<SnapshotEntity>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM portfolio_snapshots)")
+    protected abstract suspend fun hasSnapshots(): Boolean
+
+    @Upsert
+    protected abstract suspend fun upsertSnapshot(snapshot: SnapshotEntity)
+
+    private suspend fun recordSnapshot() {
+        val positions = loadPositions().map { it.toModel() }
+        val total = com.crossfolio.common.analytics.marketValue(positions) ?: return
+        // Empty initial portfolios need no artificial zero before their first investment.
+        if (positions.isEmpty() && !hasSnapshots()) return
+        upsertSnapshot(SnapshotEntity(Clock.System.now().toEpochMilliseconds(), total.value))
+    }
+
+    @Transaction
+    open suspend fun loadPositionsAndRecordSnapshot(): List<PositionRecord> {
+        val positions = loadPositions()
+        recordSnapshot()
+        return positions
+    }
+
     @Query("SELECT * FROM assets ORDER BY ticker, search_platform, search_id")
     protected abstract suspend fun loadAssets(): List<AssetEntity>
 
@@ -41,7 +66,13 @@ internal abstract class PortfolioDao {
     protected abstract suspend fun upsertQuote(quote: QuoteEntity)
 
     @Query("DELETE FROM assets WHERE search_platform = :platform AND search_id = :searchId")
-    abstract suspend fun deletePosition(platform: String, searchId: String)
+    protected abstract suspend fun deleteAsset(platform: String, searchId: String)
+
+    @Transaction
+    open suspend fun deletePosition(platform: String, searchId: String) {
+        deleteAsset(platform, searchId)
+        recordSnapshot()
+    }
 
     @Transaction
     open suspend fun loadPositions(): List<PositionRecord> = loadAssets().map { asset ->
@@ -63,7 +94,7 @@ internal abstract class PortfolioDao {
         operations.forEach { operation ->
             if (insertOperation(operation.copy(recordOrder = nextOrder)) != -1L) nextOrder++
         }
-        if (quote != null) saveQuote(quote)
+        if (quote != null) saveQuote(quote) else recordSnapshot()
     }
 
     @Transaction
@@ -72,12 +103,13 @@ internal abstract class PortfolioDao {
         if (stored == null || quote.receivedAtEpochMillis >= stored.receivedAtEpochMillis) {
             upsertQuote(quote)
         }
+        recordSnapshot()
     }
 }
 
 @Database(
-    entities = [AssetEntity::class, OperationEntity::class, QuoteEntity::class],
-    version = 1,
+    entities = [AssetEntity::class, OperationEntity::class, QuoteEntity::class, SnapshotEntity::class],
+    version = 2,
     exportSchema = true,
 )
 @ConstructedBy(PortfolioDatabaseConstructor::class)

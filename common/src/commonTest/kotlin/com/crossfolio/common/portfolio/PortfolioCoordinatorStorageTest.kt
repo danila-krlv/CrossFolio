@@ -67,5 +67,9 @@ private class CoordinatorStorageFake : PortfolioStorage {
 
     override suspend fun saveLastQuote(quote: AssetQuote) = StorageResult(Unit, null)
 
+    override suspend fun loadSnapshots() = com.crossfolio.common.portfolio.storage.StorageResult(
+        emptyList<com.crossfolio.common.analytics.PortfolioSnapshot>(), null,
+    )
+
     override fun close() = Unit
 }

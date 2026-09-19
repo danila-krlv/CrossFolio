@@ -38,7 +38,7 @@ class PortfolioCoordinator(
     imageLoader: ((String, (NetworkResult<ByteArray>) -> Unit) -> Unit)? = null,
     logoUrlProvider: (Asset) -> String? = { null },
     private val marketPriceSource: MarketPriceSource? = null,
-    private val portfolioStorage: PortfolioStorage? = null,
+    internal val portfolioStorage: PortfolioStorage? = null,
 ) {
     private val _state = MutableStateFlow(PortfolioNavigationState())
     val state: StateFlow<PortfolioNavigationState> = _state.asStateFlow()

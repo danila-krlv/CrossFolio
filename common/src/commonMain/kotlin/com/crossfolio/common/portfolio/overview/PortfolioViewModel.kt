@@ -42,7 +42,7 @@ data class PortfolioState(
     val totalValueUsdText: String get() = totalValueUsd.formatUsd()
 }
 
-private fun DecimalValue.formatUsd(): String {
+internal fun DecimalValue.formatUsd(): String {
     if (!isZero && this < DecimalValue("0.01")) return "<\$0.01"
     val whole = value.substringBefore('.')
     val fraction = value.substringAfter('.', "")

@@ -28,7 +28,9 @@ data class TabBarState(
 
 class TabBarCoordinator(
     val portfolioCoordinator: PortfolioCoordinator = PortfolioCoordinator(),
-    val analyticsViewModel: AnalyticsViewModel = AnalyticsViewModel(),
+    val analyticsViewModel: AnalyticsViewModel = AnalyticsViewModel(
+        portfolioCoordinator.portfolioViewModel, portfolioCoordinator.portfolioStorage,
+    ),
     val profileViewModel: ProfileViewModel = ProfileViewModel(),
     val apiKeyInteractor: ApiKeyInteractor = profileViewModel.apiKeyInteractor,
 ) {
@@ -76,6 +78,10 @@ class TabBarCoordinator(
             }
         }
         _state.value = _state.value.copy(apiKeyValidation = validation, alertMessage = message)
+        if (_state.value.selectedTab == AppTab.ANALYTICS &&
+            validation.status == ApiKeyValidationStatus.VALID && !validation.isEditing) {
+            analyticsViewModel.refresh()
+        }
     }
 
     private fun onNetworkFailure(failure: NetworkFailure?) {

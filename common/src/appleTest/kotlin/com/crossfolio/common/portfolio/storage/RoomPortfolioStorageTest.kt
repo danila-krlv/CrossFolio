@@ -1,5 +1,6 @@
 package com.crossfolio.common.portfolio.storage
 
+import androidx.sqlite.execSQL
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.decimal.DecimalValue
 import com.crossfolio.common.core.market.AssetQuote
@@ -20,6 +21,67 @@ import kotlin.test.assertNull
 
 @OptIn(ExperimentalForeignApi::class)
 class RoomPortfolioStorageTest {
+    @Test
+    fun persistsExactMarketHistoryAcrossReopenAndDeletion() = runBlocking {
+        val path = "${NSTemporaryDirectory()}crossfolio-history-${NSUUID().UUIDString}.db"
+        var storage = createApplePortfolioStorage(path)
+        try {
+            assertEquals(emptyList(), storage.loadPositions().value)
+            assertEquals(emptyList(), storage.loadSnapshots().value)
+            val asset = Asset("1", "BTC")
+            val operation = PortfolioOperation("a", PortfolioOperationDirection.ADDITION,
+                DecimalValue("2"), 1000,
+                AcquisitionPrice(DecimalValue("50"), AcquisitionPriceSource.MANUAL))
+            assertNull(storage.savePosition(PortfolioPosition(asset, listOf(operation))).failure)
+            assertEquals(emptyList(), storage.loadSnapshots().value)
+            assertNull(storage.saveLastQuote(AssetQuote(asset.identity, DecimalValue("0.006"), 2000)).failure)
+            assertEquals(DecimalValue("0.012"), storage.loadSnapshots().value!!.last().valueUsd)
+            storage.close()
+            storage = createApplePortfolioStorage(path)
+            assertEquals(DecimalValue("0.012"), storage.loadSnapshots().value!!.last().valueUsd)
+            assertNull(storage.deletePosition(asset.identity).failure)
+            assertEquals(DecimalValue.ZERO, storage.loadSnapshots().value!!.last().valueUsd)
+        } finally {
+            storage.close()
+            listOf(path, "$path-wal", "$path-shm").forEach {
+                NSFileManager.defaultManager.removeItemAtPath(it, null)
+            }
+        }
+    }
+
+    @Test
+    fun migratesVersionOneWithoutLosingPortfolio() = runBlocking {
+        val path = "${NSTemporaryDirectory()}crossfolio-migration-${NSUUID().UUIDString}.db"
+        // SQL from the committed version-one schema; opening through Room exercises its validation.
+        val connection = portfolioSQLiteDriver().open(path)
+        try {
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `assets` (`search_platform` TEXT NOT NULL, `search_id` TEXT NOT NULL, `ticker` TEXT NOT NULL, `name` TEXT NOT NULL, `slug` TEXT NOT NULL, `rank` INTEGER, PRIMARY KEY(`search_platform`, `search_id`))")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `operations` (`search_platform` TEXT NOT NULL, `search_id` TEXT NOT NULL, `operation_id` TEXT NOT NULL, `record_order` INTEGER NOT NULL, `direction` TEXT NOT NULL, `quantity` TEXT NOT NULL, `occurred_at_epoch_millis` INTEGER NOT NULL, `acquisition_price_usd` TEXT, `acquisition_price_source` TEXT, `commission_usd` TEXT NOT NULL, PRIMARY KEY(`search_platform`, `search_id`, `operation_id`), FOREIGN KEY(`search_platform`, `search_id`) REFERENCES `assets`(`search_platform`, `search_id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `last_quotes` (`search_platform` TEXT NOT NULL, `search_id` TEXT NOT NULL, `price_usd` TEXT NOT NULL, `received_at_epoch_millis` INTEGER NOT NULL, PRIMARY KEY(`search_platform`, `search_id`), FOREIGN KEY(`search_platform`, `search_id`) REFERENCES `assets`(`search_platform`, `search_id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
+            connection.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_operations_search_platform_search_id_record_order` ON `operations` (`search_platform`, `search_id`, `record_order`)")
+            connection.execSQL("INSERT INTO assets VALUES ('coin_market_cap', '1', 'BTC', 'Bitcoin', 'bitcoin', 1)")
+            connection.execSQL("INSERT INTO operations VALUES ('coin_market_cap', '1', 'old', 0, 'addition', '2', 1000, '5', 'manual', '0')")
+            connection.execSQL("INSERT INTO last_quotes VALUES ('coin_market_cap', '1', '3.005', 2000)")
+            connection.execSQL("PRAGMA user_version = 1")
+        } finally {
+            connection.close()
+        }
+        val storage = createApplePortfolioStorage(path)
+        try {
+            val position = assertNotNull(storage.loadPositions().value).single()
+            assertEquals("BTC", position.asset.ticker)
+            assertEquals("old", position.operations.single().id)
+            assertEquals(DecimalValue("2"), position.quantity)
+            assertEquals(DecimalValue("3.005"), position.latestQuote?.priceUsd)
+            assertEquals(DecimalValue("6.01"), storage.loadSnapshots().value!!.last().valueUsd)
+        } finally {
+            storage.close()
+            listOf(path, "$path-wal", "$path-shm").forEach {
+                NSFileManager.defaultManager.removeItemAtPath(it, null)
+            }
+        }
+    }
+
     @Test
     fun persistsPositionQuoteAndCascadeDeletion() = runBlocking {
         val databasePath = "${NSTemporaryDirectory()}crossfolio-${NSUUID().UUIDString}.db"

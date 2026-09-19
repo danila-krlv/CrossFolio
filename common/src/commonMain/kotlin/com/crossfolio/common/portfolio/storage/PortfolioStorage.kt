@@ -1,5 +1,6 @@
 package com.crossfolio.common.portfolio.storage
 
+import com.crossfolio.common.analytics.PortfolioSnapshot
 import com.crossfolio.common.core.asset.AssetIdentity
 import com.crossfolio.common.core.market.AssetQuote
 import com.crossfolio.common.portfolio.model.PortfolioPosition
@@ -35,6 +36,8 @@ interface PortfolioStorage {
 
     /** The position must already exist. */
     suspend fun saveLastQuote(quote: AssetQuote): StorageResult<Unit>
+
+    suspend fun loadSnapshots(): StorageResult<List<PortfolioSnapshot>>
 
     fun close()
 }

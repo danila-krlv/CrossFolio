@@ -69,5 +69,9 @@ private final class PortfolioStorageFixture: PortfolioStorage {
         completionHandler(StorageResult(value: nil, failure: .write), nil)
     }
 
+    func loadSnapshots(completionHandler: @escaping (StorageResult<NSArray>?, Error?) -> Void) {
+        completionHandler(StorageResult(value: NSArray(), failure: nil), nil)
+    }
+
     func close() {}
 }

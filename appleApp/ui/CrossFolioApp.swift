@@ -20,17 +20,21 @@ final class AppContainer {
         )
         let portfolioStorage = ApplePortfolioStorageKt.createApplePortfolioStorage()
 
+        let portfolioCoordinator = PortfolioCoordinator(
+            assetCatalog: client,
+            imageLoader: { url, completion in
+                client.fetchImg(url: url) { result in _ = completion(result) }
+            },
+            logoUrlProvider: { asset in client.logoUrl(asset: asset) },
+            marketPriceSource: client,
+            portfolioStorage: portfolioStorage
+        )
         tabBarCoordinator = TabBarCoordinator(
-            portfolioCoordinator: PortfolioCoordinator(
-                assetCatalog: client,
-                imageLoader: { url, completion in
-                    client.fetchImg(url: url) { result in _ = completion(result) }
-                },
-                logoUrlProvider: { asset in client.logoUrl(asset: asset) },
-                marketPriceSource: client,
+            portfolioCoordinator: portfolioCoordinator,
+            analyticsViewModel: AnalyticsViewModel(
+                portfolioViewModel: portfolioCoordinator.portfolioViewModel,
                 portfolioStorage: portfolioStorage
             ),
-            analyticsViewModel: AnalyticsViewModel(),
             profileViewModel: profileViewModel,
             apiKeyInteractor: interactor
         )
