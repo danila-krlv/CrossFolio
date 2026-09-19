@@ -1,6 +1,10 @@
 package com.crossfolio.common.portfolio.storage
 
 import androidx.room3.RoomDatabase
+import androidx.room3.migration.Migration
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
+import com.crossfolio.common.analytics.PortfolioSnapshot
 import androidx.sqlite.SQLiteDriver
 import com.crossfolio.common.core.asset.Asset
 import com.crossfolio.common.core.asset.AssetIdentity
@@ -20,10 +24,19 @@ internal fun createRoomPortfolioStorage(
     driver: SQLiteDriver,
 ): PortfolioStorage = RoomPortfolioStorage(
     builder
+        .addMigrations(PORTFOLIO_MIGRATION_1_2)
         .setDriver(driver)
         .setQueryCoroutineContext(Dispatchers.Default)
         .build(),
 )
+
+internal val PORTFOLIO_MIGRATION_1_2 = object : Migration(1, 2) {
+    override suspend fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `portfolio_snapshots` " +
+            "(`observed_at_epoch_millis` INTEGER NOT NULL, `value_usd` TEXT NOT NULL, " +
+            "PRIMARY KEY(`observed_at_epoch_millis`))")
+    }
+}
 
 internal class RoomPortfolioStorage(
     private val database: PortfolioDatabase,
@@ -32,7 +45,7 @@ internal class RoomPortfolioStorage(
 
     override suspend fun loadPositions(): StorageResult<List<PortfolioPosition>> {
         val records = try {
-            dao.loadPositions()
+            dao.loadPositionsAndRecordSnapshot()
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
@@ -94,6 +107,16 @@ internal class RoomPortfolioStorage(
         failure(StorageFailure.WRITE)
     }
 
+    override suspend fun loadSnapshots(): StorageResult<List<PortfolioSnapshot>> = try {
+        success(dao.loadSnapshots().map { PortfolioSnapshot(it.observedAtEpochMillis, DecimalValue(it.valueUsd)) })
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: IllegalArgumentException) {
+        failure(StorageFailure.INVALID_DATA)
+    } catch (_: Exception) {
+        failure(StorageFailure.READ)
+    }
+
     override fun close() = database.close()
 }
 
@@ -126,7 +149,7 @@ private fun AssetQuote.toEntity() = QuoteEntity(
     receivedAtEpochMillis = receivedAtEpochMillis,
 )
 
-private fun PositionRecord.toModel(): PortfolioPosition {
+internal fun PositionRecord.toModel(): PortfolioPosition {
     val assetEntity = asset
     val asset = Asset(
         searchId = assetEntity.searchId,

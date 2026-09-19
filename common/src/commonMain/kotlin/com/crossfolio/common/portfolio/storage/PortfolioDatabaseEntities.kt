@@ -59,6 +59,12 @@ internal data class QuoteEntity(
     @ColumnInfo(name = "received_at_epoch_millis") val receivedAtEpochMillis: Long,
 )
 
+@Entity(tableName = "portfolio_snapshots", primaryKeys = ["observed_at_epoch_millis"])
+internal data class SnapshotEntity(
+    @ColumnInfo(name = "observed_at_epoch_millis") val observedAtEpochMillis: Long,
+    @ColumnInfo(name = "value_usd") val valueUsd: String,
+)
+
 internal data class PositionRecord(
     val asset: AssetEntity,
     val operations: List<OperationEntity>,
