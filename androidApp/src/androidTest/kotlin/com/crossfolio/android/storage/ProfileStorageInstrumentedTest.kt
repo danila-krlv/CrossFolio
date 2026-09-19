@@ -3,6 +3,7 @@ package com.crossfolio.android.storage
 import android.app.Activity
 import android.app.Instrumentation
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import com.crossfolio.android.network.NetworkManagerChecks
 import com.crossfolio.common.profile.AppTheme
@@ -16,11 +17,12 @@ class ProfileStorageInstrumentation : Instrumentation() {
     }
 
     override fun onStart() {
+        check(targetContext.applicationInfo.flags and ApplicationInfo.FLAG_ALLOW_BACKUP == 0)
         testPreferencesStoragePersistsUserNameAndTheme()
         testSecureStorageEncryptsAndPersistsApiKey()
         val networkTests = NetworkManagerChecks.run()
         finish(Activity.RESULT_OK, Bundle().apply {
-            putString("result", "2 storage and $networkTests network tests passed")
+            putString("result", "Backup policy, 2 storage and $networkTests network tests passed")
         })
     }
 

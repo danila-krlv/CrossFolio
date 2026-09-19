@@ -3,7 +3,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:name=".CrossFolioApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="CrossFolio"
         android:supportsRtl="true"
         android:theme="@style/Theme.CrossFolio">
