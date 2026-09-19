@@ -23,8 +23,8 @@ internal abstract class PortfolioDao {
     @Upsert
     protected abstract suspend fun upsertSnapshot(snapshot: SnapshotEntity)
 
-    private suspend fun recordSnapshot() {
-        val positions = loadPositions().map { it.toModel() }
+    private suspend fun recordSnapshot(records: List<PositionRecord>) {
+        val positions = records.map { it.toModel() }
         val total = com.crossfolio.common.analytics.marketValue(positions) ?: return
         // Empty initial portfolios need no artificial zero before their first investment.
         if (positions.isEmpty() && !hasSnapshots()) return
@@ -34,18 +34,18 @@ internal abstract class PortfolioDao {
     @Transaction
     open suspend fun loadPositionsAndRecordSnapshot(): List<PositionRecord> {
         val positions = loadPositions()
-        recordSnapshot()
+        recordSnapshot(positions)
         return positions
     }
 
     @Query("SELECT * FROM assets ORDER BY ticker, search_platform, search_id")
     protected abstract suspend fun loadAssets(): List<AssetEntity>
 
-    @Query(
-        "SELECT * FROM operations WHERE search_platform = :platform AND search_id = :searchId " +
-            "ORDER BY record_order",
-    )
-    protected abstract suspend fun loadOperations(platform: String, searchId: String): List<OperationEntity>
+    @Query("SELECT * FROM operations ORDER BY search_platform, search_id, record_order")
+    protected abstract suspend fun loadAllOperations(): List<OperationEntity>
+
+    @Query("SELECT * FROM last_quotes")
+    protected abstract suspend fun loadAllQuotes(): List<QuoteEntity>
 
     @Query("SELECT * FROM last_quotes WHERE search_platform = :platform AND search_id = :searchId")
     abstract suspend fun loadQuote(platform: String, searchId: String): QuoteEntity?
@@ -71,16 +71,18 @@ internal abstract class PortfolioDao {
     @Transaction
     open suspend fun deletePosition(platform: String, searchId: String) {
         deleteAsset(platform, searchId)
-        recordSnapshot()
+        recordSnapshot(loadPositions())
     }
 
     @Transaction
-    open suspend fun loadPositions(): List<PositionRecord> = loadAssets().map { asset ->
-        PositionRecord(
-            asset = asset,
-            operations = loadOperations(asset.searchPlatform, asset.searchId),
-            quote = loadQuote(asset.searchPlatform, asset.searchId),
-        )
+    open suspend fun loadPositions(): List<PositionRecord> {
+        val assets = loadAssets()
+        val operations = loadAllOperations().groupBy { it.searchPlatform to it.searchId }
+        val quotes = loadAllQuotes().associateBy { it.searchPlatform to it.searchId }
+        return assets.map { asset ->
+            val identity = asset.searchPlatform to asset.searchId
+            PositionRecord(asset, operations[identity].orEmpty(), quotes[identity])
+        }
     }
 
     @Transaction
@@ -94,17 +96,21 @@ internal abstract class PortfolioDao {
         operations.forEach { operation ->
             if (insertOperation(operation.copy(recordOrder = nextOrder)) != -1L) nextOrder++
         }
-        if (quote != null) saveQuote(quote) else recordSnapshot()
+        if (quote != null) saveQuotes(listOf(quote)) else recordSnapshot(loadPositions())
     }
 
     @Transaction
-    open suspend fun saveQuote(quote: QuoteEntity) {
-        val stored = loadQuote(quote.searchPlatform, quote.searchId)
-        if (stored == null || quote.receivedAtEpochMillis >= stored.receivedAtEpochMillis) {
-            upsertQuote(quote)
+    open suspend fun saveQuotes(quotes: List<QuoteEntity>) {
+        if (quotes.isEmpty()) return
+        for (quote in quotes) {
+            val stored = loadQuote(quote.searchPlatform, quote.searchId)
+            if (stored == null || quote.receivedAtEpochMillis >= stored.receivedAtEpochMillis) {
+                upsertQuote(quote)
+            }
         }
-        recordSnapshot()
+        recordSnapshot(loadPositions())
     }
+
 }
 
 @Database(

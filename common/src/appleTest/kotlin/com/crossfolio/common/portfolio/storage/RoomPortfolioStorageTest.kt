@@ -22,6 +22,42 @@ import kotlin.test.assertNull
 @OptIn(ExperimentalForeignApi::class)
 class RoomPortfolioStorageTest {
     @Test
+    fun quoteBatchCreatesOneSnapshotAndRollsBackAsAUnit() = runBlocking {
+        val path = "${NSTemporaryDirectory()}crossfolio-batch-${NSUUID().UUIDString}.db"
+        val storage = createApplePortfolioStorage(path)
+        try {
+            val assets = listOf(Asset("1", "SAME"), Asset("2", "SAME"))
+            assets.forEach { asset ->
+                val operation = PortfolioOperation("a", PortfolioOperationDirection.ADDITION,
+                    DecimalValue("2"), 1000,
+                    AcquisitionPrice(DecimalValue("1"), AcquisitionPriceSource.MANUAL))
+                assertNull(storage.savePosition(PortfolioPosition(asset, listOf(operation))).failure)
+            }
+            val quotes = assets.mapIndexed { index, asset ->
+                AssetQuote(asset.identity, DecimalValue((index + 3).toString()), 2000)
+            }
+            assertNull(storage.saveLastQuotes(quotes).failure)
+            assertEquals(DecimalValue("14"), storage.loadSnapshots().value!!.single().valueUsd)
+            val invalidBatch = listOf(
+                AssetQuote(assets[0].identity, DecimalValue("100"), 3000),
+                AssetQuote(Asset("missing", "NONE").identity, DecimalValue("1"), 3000),
+            )
+            assertEquals(StorageFailure.WRITE, storage.saveLastQuotes(invalidBatch).failure)
+            assertEquals(quotes[0], storage.loadLastQuote(assets[0].identity).value)
+            assertEquals(DecimalValue("14"), storage.loadSnapshots().value!!.single().valueUsd)
+            val positions = storage.loadPositions().value!!
+            assertEquals(assets, positions.map { it.asset })
+            assertEquals(quotes, positions.map { it.latestQuote })
+            assertEquals(listOf("2", "2"), positions.map { it.quantity.value })
+        } finally {
+            storage.close()
+            listOf(path, "$path-wal", "$path-shm").forEach {
+                NSFileManager.defaultManager.removeItemAtPath(it, null)
+            }
+        }
+    }
+
+    @Test
     fun persistsExactMarketHistoryAcrossReopenAndDeletion() = runBlocking {
         val path = "${NSTemporaryDirectory()}crossfolio-history-${NSUUID().UUIDString}.db"
         var storage = createApplePortfolioStorage(path)

@@ -122,13 +122,17 @@ class PortfolioViewModel(
         val source = marketPriceSource ?: return
         if (!canRefreshPrices()) return
         val generation = priceGeneration
-        for (position in _state.value.positions) {
+        val now = nowEpochMillis()
+        val positions = _state.value.positions.filter { position ->
+            val identity = position.asset.identity
+            position.latestQuote?.let { now - it.receivedAtEpochMillis < 600_000 } != true &&
+                failedAt[identity]?.let { now - it < 60_000 } != true && inFlight.add(identity)
+        }
+        var remaining = positions.size
+        val quotes = mutableListOf<AssetQuote>()
+        for (position in positions) {
             if (generation != priceGeneration || !canRefreshPrices()) break
             val identity = position.asset.identity
-            val now = nowEpochMillis()
-            if (position.latestQuote?.let { now - it.receivedAtEpochMillis < 600_000 } == true ||
-                failedAt[identity]?.let { now - it < 60_000 } == true ||
-                !inFlight.add(identity)) continue
             source.fetchMarketPrice(position.asset) { result ->
                 if (generation != priceGeneration) return@fetchMarketPrice
                 val price = result.value
@@ -138,17 +142,21 @@ class PortfolioViewModel(
                         failedAt[identity] = nowEpochMillis()
                         onMarketPriceFailed(result.failure)
                     }
-                    return@fetchMarketPrice
+                } else {
+                    quotes += AssetQuote(identity, price, nowEpochMillis())
                 }
-                val quote = AssetQuote(identity, price, nowEpochMillis())
+                remaining--
+                if (remaining != 0 || quotes.isEmpty() || generation != priceGeneration) return@fetchMarketPrice
                 scope.launch {
-                    val saved = portfolioStorage?.saveLastQuote(quote)
+                    val saved = portfolioStorage?.saveLastQuotes(quotes)
                     if (generation != priceGeneration) return@launch
-                    inFlight.remove(identity)
-                    failedAt.remove(identity)
+                    val byIdentity = quotes.associateBy { it.assetIdentity }
+                    inFlight.removeAll(byIdentity.keys)
+                    byIdentity.keys.forEach { failedAt.remove(it) }
                     _state.value = _state.value.copy(
                         positions = _state.value.positions.map { current ->
-                            if (current.asset.identity == identity &&
+                            val quote = byIdentity[current.asset.identity]
+                            if (quote != null &&
                                 (current.latestQuote?.receivedAtEpochMillis ?: Long.MIN_VALUE) <= quote.receivedAtEpochMillis) {
                                 PortfolioPosition(current.asset, current.operations, quote)
                             } else current
