@@ -105,5 +105,10 @@ class ProfileViewModel internal constructor(
         cancelPending = null
     }
 
+    fun observeState(observer: (ProfileState) -> Unit): () -> Unit {
+        val job = CoroutineScope(Dispatchers.Main.immediate).launch { state.collect { observer(it) } }
+        return { job.cancel() }
+    }
+
     fun getCoinMarketCapApiKey(): String = apiKeyInteractor.getSavedKey()
 }
