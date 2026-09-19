@@ -5,6 +5,7 @@ import com.crossfolio.common.core.asset.AssetIdentity
 import com.crossfolio.common.core.market.AssetQuote
 import com.crossfolio.common.core.decimal.DecimalValue
 import com.crossfolio.common.core.market.MarketPriceSource
+import com.crossfolio.common.core.network.NetworkFailure
 import com.crossfolio.common.core.network.NetworkResult
 import com.crossfolio.common.portfolio.model.PortfolioOperationRules
 import com.crossfolio.common.portfolio.model.AcquisitionPriceSource
@@ -22,6 +23,37 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class EditViewModelTest {
+    @Test
+    fun freshSavedQuoteAvoidsNetworkAndPreservesExactAcquisitionPrice() {
+        val asset = Asset("1", "BTC")
+        val cached = AssetQuote(asset.identity, DecimalValue("12.345678901"), 700_000)
+        val source = ManualMarketPriceSource()
+        val model = EditViewModel(asset, {}, nowEpochMillis = { 1_200_000L },
+            marketPriceSource = source, portfolioStorage = RecordingPortfolioStorage(cachedQuote = cached))
+        model.setQuantity("1")
+        assertEquals(0, source.requests)
+        assertFalse(model.state.value.isMarketPriceLoading)
+        assertEquals(cached, model.state.value.position?.latestQuote)
+        assertEquals(cached.priceUsd, model.state.value.position?.operations?.single()?.acquisitionPrice?.usd)
+    }
+
+    @Test
+    fun staleQuoteRemainsUsableWhenRefreshFails() {
+        val asset = Asset("1", "BTC")
+        val cached = AssetQuote(asset.identity, DecimalValue("12.345678901"), 600_000)
+        val source = ManualMarketPriceSource()
+        val model = EditViewModel(asset, {}, nowEpochMillis = { 1_200_000L },
+            marketPriceSource = source, portfolioStorage = RecordingPortfolioStorage(cachedQuote = cached))
+        model.setQuantity("1")
+        assertEquals(1, source.requests)
+        assertTrue(model.state.value.canSave)
+        source.fail()
+        assertFalse(model.state.value.isMarketPriceLoading)
+        assertEquals(cached.priceUsd, model.state.value.marketPriceUsd)
+        assertEquals(cached, model.state.value.position?.latestQuote)
+        assertTrue(model.state.value.canSave)
+    }
+
     private fun model() = EditViewModel(
         Asset("1", "BTC"), {}, nowEpochMillis = { 120_000L }, marketPriceSource = FixedMarketPriceSource,
     )
@@ -211,6 +243,7 @@ class EditViewModelTest {
 private class RecordingPortfolioStorage(
     private val saveFailure: StorageFailure? = null,
     private val deferSave: Boolean = false,
+    private val cachedQuote: AssetQuote? = null,
 ) : PortfolioStorage {
     var savedPosition: PortfolioPosition? = null
     var pendingSave: Continuation<Unit>? = null
@@ -228,7 +261,8 @@ private class RecordingPortfolioStorage(
     override suspend fun deletePosition(assetIdentity: AssetIdentity) = StorageResult(Unit, null)
 
     override suspend fun loadLastQuote(assetIdentity: AssetIdentity) =
-        StorageResult<AssetQuote>(null, StorageFailure.NOT_FOUND)
+        if (cachedQuote != null) StorageResult(cachedQuote, null)
+        else StorageResult<AssetQuote>(null, StorageFailure.NOT_FOUND)
 
     override suspend fun saveLastQuote(quote: AssetQuote) = StorageResult(Unit, null)
 
@@ -246,11 +280,15 @@ private object FixedMarketPriceSource : MarketPriceSource {
 }
 
 private class ManualMarketPriceSource : MarketPriceSource {
+    var requests = 0
     private lateinit var completion: (NetworkResult<DecimalValue>) -> Unit
 
     override fun fetchMarketPrice(asset: Asset, completion: (NetworkResult<DecimalValue>) -> Unit) {
+        requests++
         this.completion = completion
     }
+
+    fun fail() { completion(NetworkResult(null, "Offline", NetworkFailure.TRANSPORT)) }
 
     fun complete(price: DecimalValue) {
         completion(NetworkResult(price, null))

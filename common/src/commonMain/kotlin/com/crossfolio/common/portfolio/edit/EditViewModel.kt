@@ -81,7 +81,14 @@ class EditViewModel(
 
     init {
         update(_state.value)
-        fetchMarketPrice()
+        update(_state.value.copy(isMarketPriceLoading = true))
+        scope.launch {
+            quote = portfolioStorage?.loadLastQuote(asset.identity)?.value
+            update(_state.value.copy(marketPriceUsd = quote?.priceUsd, isMarketPriceLoading = false))
+            if (quote?.let { nowEpochMillis() - it.receivedAtEpochMillis < 600_000 } != true) {
+                fetchMarketPrice()
+            }
+        }
     }
 
     fun setQuantity(text: String) = edit(_state.value.copy(quantity = EditFieldState(text, true)))
@@ -122,7 +129,7 @@ class EditViewModel(
 
     private fun fetchMarketPrice() {
         val source = marketPriceSource ?: return
-        if (quote != null || _state.value.isMarketPriceLoading) return
+        if (_state.value.isMarketPriceLoading) return
         update(_state.value.copy(isMarketPriceLoading = true))
         source.fetchMarketPrice(asset) { result ->
             val price = result.value
