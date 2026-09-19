@@ -96,6 +96,7 @@ struct PortfolioScreen: View {
                 }
             }
 
+            #if os(iOS)
             Button {
                 coordinator.portfolioViewModel.onAssetSearch()
                 syncRoute()
@@ -109,13 +110,26 @@ struct PortfolioScreen: View {
             .clipShape(Circle())
             .accessibilityLabel("Добавить актив")
             .padding(24)
+            #endif
         }
-        #if os(iOS)
+        #if os(macOS)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    coordinator.portfolioViewModel.onAssetSearch()
+                    syncRoute()
+                } label: {
+                    Label("Добавить актив", systemImage: "plus")
+                }
+                .keyboardShortcut("n", modifiers: .command)
+                .disabled(!isSearchEnabled)
+            }
+        }
+        #endif
         .onAppear { coordinator.portfolioViewModel.loadPositions() }
         .onChange(of: isSearchEnabled) { _, _ in
             coordinator.portfolioViewModel.loadPositions()
         }
-        #endif
     }
 
     private var assetSearchContent: some View {
@@ -126,10 +140,14 @@ struct PortfolioScreen: View {
             } label: {
                 Label("Назад", systemImage: "chevron.left")
             }
+            #if os(macOS)
+            .keyboardShortcut(.escape, modifiers: [])
+            #endif
 
             AssetSearchScreen(viewModel: coordinator.assetSearchViewModel)
         }
         .padding(16)
+        .navigationTitle("Выбор актива")
     }
 
     private func syncRoute() {
@@ -147,12 +165,16 @@ private struct PortfolioRow: View {
             AssetLogo(url: logoURL)
             VStack(alignment: .leading, spacing: 4) {
                 Text(row.position.asset.ticker).font(.headline)
+                #if os(macOS)
+                Text(row.position.asset.name).foregroundStyle(.secondary)
+                #endif
                 Text("\(row.position.quantity.value) \(row.position.asset.ticker)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
             Text(row.valueUsdText)
+                .monospacedDigit()
                 .font(.headline)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)

@@ -10,6 +10,11 @@ struct AssetSearchScreen: View {
     let viewModel: AssetSearchViewModel
     @State private var state: AssetSearchState
     @State private var stopObserving: (() -> Void)?
+    #if os(macOS)
+    @State private var selectedAssetID: String?
+    private enum Focus { case search, results }
+    @FocusState private var focus: Focus?
+    #endif
 
     init(viewModel: AssetSearchViewModel) {
         self.viewModel = viewModel
@@ -21,6 +26,15 @@ struct AssetSearchScreen: View {
             TextField("Тикер или название", text: searchText)
                 .textFieldStyle(.roundedBorder)
                 .autocorrectionDisabled()
+                #if os(macOS)
+                .focused($focus, equals: .search)
+                .onSubmit { selectHighlightedAsset() }
+                .onKeyPress(.downArrow) {
+                    if selectedAssetID == nil { selectedAssetID = state.assets.first?.searchId }
+                    focus = .results
+                    return .handled
+                }
+                #endif
                 #if os(iOS)
                 .textInputAutocapitalization(.never)
                 #endif
@@ -37,6 +51,28 @@ struct AssetSearchScreen: View {
                     .foregroundStyle(.secondary)
                 Spacer()
             } else {
+                #if os(macOS)
+                List(state.assets, id: \.searchId, selection: $selectedAssetID) { asset in
+                    AssetSearchRow(asset: asset, logoURL: state.logoUrls[asset.searchId])
+                        .contentShape(Rectangle())
+                        .tag(asset.searchId)
+                        .onTapGesture(count: 2) { viewModel.selectAsset(asset: asset) }
+                        .onAppear { viewModel.loadLogo(asset: asset) }
+                }
+                .focused($focus, equals: .results)
+                .onKeyPress(.return) {
+                    selectHighlightedAsset()
+                    return .handled
+                }
+                .listStyle(.inset)
+                HStack {
+                    Text("Выберите актив и нажмите Enter или дважды нажмите на строку")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Продолжить") { selectHighlightedAsset() }
+                        .disabled(selectedAssetID == nil)
+                }
+                #else
                 List(state.assets, id: \.searchId) { asset in
                     Button {
                         viewModel.selectAsset(asset: asset)
@@ -48,17 +84,37 @@ struct AssetSearchScreen: View {
                     .onAppear { viewModel.loadLogo(asset: asset) }
                 }
                 .listStyle(.plain)
+                #endif
             }
         }
+        #if os(macOS)
+        .onChange(of: state.searchText) { _, _ in selectedAssetID = nil }
+        .toolbar {
+            Button { focus = .search } label: {
+                Label("Поиск", systemImage: "magnifyingglass")
+            }
+            .keyboardShortcut("f", modifiers: .command)
+        }
+        #endif
         .onAppear {
             stopObserving?()
             stopObserving = viewModel.observeState { state = $0 }
+            #if os(macOS)
+            focus = .search
+            #endif
         }
         .onDisappear {
             stopObserving?()
             stopObserving = nil
         }
     }
+
+    #if os(macOS)
+    private func selectHighlightedAsset() {
+        guard let asset = state.assets.first(where: { $0.searchId == selectedAssetID }) else { return }
+        viewModel.selectAsset(asset: asset)
+    }
+    #endif
 
     private var searchText: Binding<String> {
         Binding(

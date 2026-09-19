@@ -1,6 +1,8 @@
 import Security
 import XCTest
+#if os(iOS)
 @testable import CrossFolio_iOS
+#endif
 
 final class ProfileStorageTests: XCTestCase {
     func testPreferencesStoragePersistsUserNameAndTheme() {
