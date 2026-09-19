@@ -12,6 +12,9 @@ import com.crossfolio.common.portfolio.model.PortfolioPosition
 import com.crossfolio.common.portfolio.storage.PortfolioStorage
 import com.crossfolio.common.portfolio.storage.StorageFailure
 import com.crossfolio.common.portfolio.storage.StorageResult
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -115,6 +118,38 @@ class EditViewModelTest {
     }
 
     @Test
+    fun pendingSaveFreezesFormAndBackAndAllowsRetryAfterFailure() {
+        val storage = RecordingPortfolioStorage(StorageFailure.WRITE, deferSave = true)
+        var backs = 0
+        val model = EditViewModel(
+            Asset("1", "BTC"), { backs++ }, nowEpochMillis = { 120_000L },
+            marketPriceSource = FixedMarketPriceSource, portfolioStorage = storage,
+        )
+        model.setQuantity("1")
+        model.save()
+        assertTrue(model.state.value.isSaving)
+        assertFalse(model.state.value.canSave)
+        model.setQuantity("2")
+        model.setPrice("5")
+        model.setCommission("1")
+        model.setDate(60_000)
+        model.onBack()
+        model.save()
+        assertEquals("1", model.state.value.quantity.text)
+        assertEquals("", model.state.value.price.text)
+        assertEquals("", model.state.value.commission.text)
+        assertEquals(120_000L, model.state.value.occurredAtEpochMillis)
+        assertEquals(0, backs)
+        assertEquals(1, storage.saveCount)
+        storage.pendingSave!!.resume(Unit)
+        assertFalse(model.state.value.isSaving)
+        assertEquals(StorageFailure.WRITE, model.state.value.storageFailure)
+        model.setQuantity("2")
+        assertEquals("2", model.state.value.quantity.text)
+        assertTrue(model.state.value.canSave)
+    }
+
+    @Test
     fun saveFailureStaysInEditState() {
         val storage = RecordingPortfolioStorage(StorageFailure.WRITE)
         var saved = false
@@ -175,13 +210,18 @@ class EditViewModelTest {
 
 private class RecordingPortfolioStorage(
     private val saveFailure: StorageFailure? = null,
+    private val deferSave: Boolean = false,
 ) : PortfolioStorage {
     var savedPosition: PortfolioPosition? = null
+    var pendingSave: Continuation<Unit>? = null
+    var saveCount = 0
 
     override suspend fun loadPositions() = StorageResult(emptyList<PortfolioPosition>(), null)
 
     override suspend fun savePosition(position: PortfolioPosition): StorageResult<Unit> {
+        saveCount++
         savedPosition = position
+        if (deferSave) suspendCoroutine<Unit> { pendingSave = it }
         return if (saveFailure == null) StorageResult(Unit, null) else StorageResult(null, saveFailure)
     }
 

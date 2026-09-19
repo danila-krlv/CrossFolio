@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -37,13 +38,13 @@ import java.util.Date
 fun EditScreen(viewModel: EditViewModel) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
-    BackHandler(onBack = viewModel::onBack)
+    BackHandler { if (!state.isSaving) viewModel.onBack() }
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Добавить актив") },
-                navigationIcon = { TextButton(onClick = viewModel::onBack) { Text("Назад") } },
-                actions = { TextButton(onClick = viewModel::save, enabled = state.canSave) { Text("Save") } },
+                navigationIcon = { TextButton(onClick = viewModel::onBack, enabled = !state.isSaving) { Text("Назад") } },
+                actions = { TextButton(onClick = viewModel::save, enabled = state.canSave && !state.isSaving) { Text("Save") } },
             )
         },
     ) { padding ->
@@ -54,10 +55,10 @@ fun EditScreen(viewModel: EditViewModel) {
         ) {
             Text(viewModel.asset.name, style = MaterialTheme.typography.headlineSmall)
             Text(viewModel.asset.ticker, style = MaterialTheme.typography.titleMedium)
-            DecimalField("Количество (${viewModel.asset.ticker})", state.quantity, viewModel::setQuantity)
+            DecimalField("Количество (${viewModel.asset.ticker})", state.quantity, viewModel::setQuantity, enabled = !state.isSaving)
             Column {
                 Text("Дата и время", style = MaterialTheme.typography.labelLarge)
-                TextButton(onClick = {
+                TextButton(enabled = !state.isSaving, onClick = {
                     val selected = Calendar.getInstance().apply { timeInMillis = state.occurredAtEpochMillis }
                     DatePickerDialog(context, { _, year, month, day ->
                         selected.set(year, month, day)
@@ -67,7 +68,7 @@ fun EditScreen(viewModel: EditViewModel) {
                         datePicker.maxDate = System.currentTimeMillis()
                     }.show()
                 }) { Text(DateFormat.getDateInstance().format(Date(state.occurredAtEpochMillis))) }
-                TextButton(onClick = {
+                TextButton(enabled = !state.isSaving, onClick = {
                     val selected = Calendar.getInstance().apply { timeInMillis = state.occurredAtEpochMillis }
                     TimePickerDialog(context, { _, hour, minute ->
                         selected.set(Calendar.HOUR_OF_DAY, hour)
@@ -86,9 +87,14 @@ fun EditScreen(viewModel: EditViewModel) {
                         "Необязательно — используется ${state.marketPriceUsdText} USD"
                     state.isMarketPriceLoading -> "Загружаем котировку… Можно указать цену вручную"
                     else -> "Котировка недоступна — укажите цену вручную"
-                })
+                }, enabled = !state.isSaving)
             DecimalField("Комиссия, USD", state.commission, viewModel::setCommission,
-                "Необязательно — по умолчанию 0 USD")
+                "Необязательно — по умолчанию 0 USD", enabled = !state.isSaving)
+            if (state.isSaving) CircularProgressIndicator()
+            if (state.storageFailure != null) {
+                Text("Не удалось сохранить операцию. Попробуйте сохранить ещё раз.",
+                    color = MaterialTheme.colorScheme.error)
+            }
         }
     }
 }
@@ -99,11 +105,12 @@ private fun DecimalField(
     field: EditFieldState,
     onChange: (String) -> Unit,
     hint: String? = null,
+    enabled: Boolean = true,
 ) {
     OutlinedTextField(
         value = field.text, onValueChange = onChange,
         label = { Text(label) }, modifier = Modifier.fillMaxWidth(),
-        singleLine = true, isError = field.isError,
+        singleLine = true, isError = field.isError, enabled = enabled,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         supportingText = {
             if (field.isError) Text(field.error.orEmpty()) else if (hint != null) Text(hint)

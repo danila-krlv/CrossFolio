@@ -43,7 +43,7 @@ data class EditState(
     val isSaving: Boolean = false,
     val storageFailure: StorageFailure? = null,
 ) {
-    val canSave: Boolean get() = position != null
+    val canSave: Boolean get() = position != null && !isSaving
     val marketPriceUsdText: String? get() = marketPriceUsd?.let(::formatMarketPrice)
 }
 
@@ -84,12 +84,16 @@ class EditViewModel(
         fetchMarketPrice()
     }
 
-    fun setQuantity(text: String) = update(_state.value.copy(quantity = EditFieldState(text, true)))
-    fun setPrice(text: String) = update(_state.value.copy(price = EditFieldState(text, true)))
-    fun setCommission(text: String) = update(_state.value.copy(commission = EditFieldState(text, true)))
-    fun setDate(epochMillis: Long) = update(_state.value.copy(
+    fun setQuantity(text: String) = edit(_state.value.copy(quantity = EditFieldState(text, true)))
+    fun setPrice(text: String) = edit(_state.value.copy(price = EditFieldState(text, true)))
+    fun setCommission(text: String) = edit(_state.value.copy(commission = EditFieldState(text, true)))
+    fun setDate(epochMillis: Long) = edit(_state.value.copy(
         occurredAtEpochMillis = epochMillis / 60_000 * 60_000, hasEditedDate = true,
     ))
+
+    private fun edit(input: EditState) {
+        if (!_state.value.isSaving) update(input)
+    }
 
     private fun update(input: EditState) {
         val quantity = runCatching { rules.parseQuantity(input.quantity.text) }
@@ -151,5 +155,5 @@ class EditViewModel(
         return { job.cancel() }
     }
 
-    fun onBack() { onBackRequested() }
+    fun onBack() { if (!_state.value.isSaving) onBackRequested() }
 }
