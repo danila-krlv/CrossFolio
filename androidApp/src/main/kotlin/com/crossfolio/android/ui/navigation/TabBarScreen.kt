@@ -19,6 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.crossfolio.android.ui.analytics.AnalyticsScreen
 import com.crossfolio.android.ui.portfolio.PortfolioScreen
 import com.crossfolio.android.ui.profile.ProfileScreen
+import com.crossfolio.common.core.network.ApiKeyValidationStatus
 import com.crossfolio.common.navigation.AppTab
 import com.crossfolio.common.navigation.TabBarCoordinator
 
@@ -34,6 +35,11 @@ fun TabBarScreen(
                 onDismissRequest = coordinator::dismissAlert,
                 title = { Text("Ошибка") },
                 text = { Text(message) },
+                dismissButton = {
+                    if (state.apiKeyValidation.status == ApiKeyValidationStatus.CHECK_FAILED) {
+                        TextButton(onClick = coordinator.apiKeyInteractor::start) { Text("Проверить сохранённый ключ") }
+                    }
+                },
                 confirmButton = {
                     TextButton(onClick = coordinator::dismissAlert) { Text("ОК") }
                 },
