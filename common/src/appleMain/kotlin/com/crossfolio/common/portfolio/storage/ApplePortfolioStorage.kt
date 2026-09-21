@@ -1,0 +1,38 @@
+package com.crossfolio.common.portfolio.storage
+
+import androidx.room3.Room
+import androidx.sqlite.SQLiteDriver
+import kotlinx.cinterop.ExperimentalForeignApi
+import platform.Foundation.NSApplicationSupportDirectory
+import platform.Foundation.NSFileManager
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSUserDomainMask
+
+fun createApplePortfolioStorage(): PortfolioStorage =
+    createApplePortfolioStorage(defaultPortfolioDatabasePath())
+
+fun createApplePortfolioStorage(databasePath: String): PortfolioStorage = createRoomPortfolioStorage(
+    Room.databaseBuilder<PortfolioDatabase>(name = databasePath),
+    portfolioSQLiteDriver(),
+)
+
+internal expect fun portfolioSQLiteDriver(): SQLiteDriver
+
+@OptIn(ExperimentalForeignApi::class)
+private fun defaultPortfolioDatabasePath(): String {
+    val baseDirectory = requireNotNull(
+        NSSearchPathForDirectoriesInDomains(
+            directory = NSApplicationSupportDirectory,
+            domainMask = NSUserDomainMask,
+            expandTilde = true,
+        ).firstOrNull() as? String,
+    )
+    val directory = "$baseDirectory/CrossFolio"
+    NSFileManager.defaultManager.createDirectoryAtPath(
+        path = directory,
+        withIntermediateDirectories = true,
+        attributes = null,
+        error = null,
+    )
+    return "$directory/crossfolio.db"
+}

@@ -13,6 +13,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+        testInstrumentationRunner = "com.crossfolio.android.storage.ProfileStorageInstrumentation"
     }
 
     buildFeatures {
@@ -26,7 +27,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":shared"))
+    implementation(project(":common"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

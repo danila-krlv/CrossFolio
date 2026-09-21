@@ -17,4 +17,4 @@ dependencyResolutionManagement {
 rootProject.name = "CrossFolio"
 
 include(":androidApp")
-include(":shared")
+include(":common")
