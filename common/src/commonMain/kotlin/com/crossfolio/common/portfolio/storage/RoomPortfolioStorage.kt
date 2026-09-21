@@ -98,8 +98,10 @@ internal class RoomPortfolioStorage(
         }
     }
 
-    override suspend fun saveLastQuote(quote: AssetQuote): StorageResult<Unit> = try {
-        dao.saveQuote(quote.toEntity())
+    override suspend fun saveLastQuote(quote: AssetQuote): StorageResult<Unit> = saveLastQuotes(listOf(quote))
+
+    override suspend fun saveLastQuotes(quotes: List<AssetQuote>): StorageResult<Unit> = try {
+        dao.saveQuotes(quotes.map { it.toEntity() })
         success(Unit)
     } catch (error: CancellationException) {
         throw error

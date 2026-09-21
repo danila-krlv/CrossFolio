@@ -10,14 +10,20 @@ import com.crossfolio.common.core.network.NetworkResult
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
+import java.util.concurrent.Executor
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 class NetworkManager internal constructor(
+    private val executor: Executor = apiExecutor,
     private val connectionFactory: (URL) -> HttpURLConnection,
 ) : HttpTransport {
-    constructor() : this({ it.openConnection() as HttpURLConnection })
+    constructor() : this(connectionFactory = { it.openConnection() as HttpURLConnection })
 
     override fun execute(request: HttpRequest, completion: (NetworkResult<HttpResponse>) -> Unit) {
-        executor.execute {
+        val work = Runnable {
             val result = try {
                 val url = URL(request.url)
                 require(url.protocol in listOf("http", "https") && url.host.isNotEmpty())
@@ -38,10 +44,24 @@ class NetworkManager internal constructor(
             }
             mainHandler.post { completion(result) }
         }
+        try {
+            executor.execute(work)
+        } catch (_: RejectedExecutionException) {
+            mainHandler.post {
+                completion(NetworkResult(null, "Network queue is full", NetworkFailure.TRANSPORT))
+            }
+        }
     }
 
-    private companion object {
-        val executor = Executors.newFixedThreadPool(4)
-        val mainHandler = Handler(Looper.getMainLooper())
+    internal companion object {
+        private val apiExecutor = Executors.newFixedThreadPool(4)
+        // Bound obsolete image work; API requests use their own workers.
+        private val imageExecutor = ThreadPoolExecutor(
+            2, 2, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(32),
+        )
+        fun forImages(connectionFactory: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection }) =
+            NetworkManager(imageExecutor, connectionFactory)
+
+        private val mainHandler = Handler(Looper.getMainLooper())
     }
 }

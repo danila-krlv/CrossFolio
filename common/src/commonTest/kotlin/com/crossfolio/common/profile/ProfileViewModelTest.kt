@@ -10,6 +10,21 @@ import kotlin.test.assertTrue
 
 class ProfileViewModelTest {
     @Test
+    fun themeObservationStartsWithSavedPreferenceAndCanBeCancelled() {
+        val preferences = FakePreferencesStorage("", AppTheme.DARK)
+        val model = profile(preferences)
+        val observed = mutableListOf<AppTheme>()
+        val stop = model.observeState { observed += it.theme }
+        assertEquals(listOf(AppTheme.DARK), observed)
+        model.setTheme(AppTheme.LIGHT)
+        assertEquals(AppTheme.LIGHT, observed.last())
+        stop()
+        model.setTheme(AppTheme.SYSTEM)
+        assertEquals(AppTheme.LIGHT, observed.last())
+        assertEquals(AppTheme.SYSTEM, profile(preferences).state.value.theme)
+    }
+
+    @Test
     fun notifiesOnlyAfterStoredKeyChanges() {
         val model = profile()
         var changes = 0

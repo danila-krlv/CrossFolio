@@ -19,6 +19,20 @@ import kotlin.test.assertTrue
 
 class ApiKeyValidationTest {
     @Test
+    fun explicitRetryRecoversAfterStartupNetworkFailure() {
+        val f = Fixture()
+        f.network.validations[0](NetworkResult(null, "Offline", NetworkFailure.TRANSPORT))
+        f.tabs.dismissAlert()
+        f.tabs.apiKeyInteractor.start()
+        assertEquals(ApiKeyValidationStatus.CHECKING, f.tabs.state.value.apiKeyValidation.status)
+        assertNull(f.tabs.state.value.alertMessage)
+        assertEquals(listOf("saved-placeholder", "saved-placeholder"), f.network.keys)
+        f.valid(1)
+        assertTrue(f.tabs.portfolioCoordinator.state.value.isSearchEnabled)
+        assertEquals(0, f.storage.writes)
+    }
+
+    @Test
     fun oldCatalogFailureDoesNotCancelCandidateValidation() {
         val f = Fixture()
         f.valid(0)

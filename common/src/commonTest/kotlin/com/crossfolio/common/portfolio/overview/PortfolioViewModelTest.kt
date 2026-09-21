@@ -22,6 +22,25 @@ import kotlin.test.assertNull
 
 class PortfolioViewModelTest {
     @Test
+    fun savesSuccessfulRefreshResponsesTogetherAfterPartialFailure() {
+        val storage = PortfolioStorageFake(listOf(
+            position("1", "BTC", "2", null), position("2", "ETH", "3", null),
+            position("3", "OTHER", "1", null),
+        ))
+        val source = PriceSourceFake()
+        val model = PortfolioViewModel({}, storage, marketPriceSource = source)
+        source.requests[0].second(NetworkResult(DecimalValue("10"), null))
+        source.requests[1].second(NetworkResult(DecimalValue("20"), null))
+        assertEquals(0, storage.savedBatches)
+        model.loadPositions()
+        assertEquals(3, source.requests.size)
+        source.requests[2].second(NetworkResult(null, "Offline", NetworkFailure.TRANSPORT))
+        assertEquals(1, storage.savedBatches)
+        assertEquals(2, storage.savedQuotes.size)
+        assertEquals(DecimalValue("81"), model.state.value.totalValueUsd)
+    }
+
+    @Test
     fun refreshesStaleAndMissingQuotesWithoutDuplicateRequests() {
         var now = 600_000L
         val storage = PortfolioStorageFake(listOf(position("1", "BTC", "2", "10"), position("2", "ETH", "3", null)))
@@ -166,6 +185,7 @@ class PortfolioViewModelTest {
 private class PortfolioStorageFake(
     var positions: List<PortfolioPosition>,
 ) : PortfolioStorage {
+    var savedBatches = 0
     val savedQuotes = mutableListOf<AssetQuote>()
     override suspend fun loadPositions() = StorageResult(positions, null)
     override suspend fun savePosition(position: PortfolioPosition) = StorageResult(Unit, null)
@@ -177,6 +197,11 @@ private class PortfolioStorageFake(
         positions = positions.map {
             if (it.asset.identity == quote.assetIdentity) PortfolioPosition(it.asset, it.operations, quote) else it
         }
+        return StorageResult(Unit, null)
+    }
+    override suspend fun saveLastQuotes(quotes: List<AssetQuote>): StorageResult<Unit> {
+        savedBatches++
+        quotes.forEach { saveLastQuote(it) }
         return StorageResult(Unit, null)
     }
     override suspend fun loadSnapshots() = com.crossfolio.common.portfolio.storage.StorageResult(

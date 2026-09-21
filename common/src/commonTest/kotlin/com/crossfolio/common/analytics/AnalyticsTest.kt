@@ -96,6 +96,7 @@ private class AnalyticsStorageFake : PortfolioStorage {
     override suspend fun savePosition(position: PortfolioPosition) = StorageResult(Unit, null)
     override suspend fun deletePosition(assetIdentity: AssetIdentity) = StorageResult(Unit, null)
     override suspend fun saveLastQuote(quote: AssetQuote) = StorageResult(Unit, null)
+    override suspend fun saveLastQuotes(quotes: List<AssetQuote>) = StorageResult(Unit, null)
     override suspend fun loadLastQuote(assetIdentity: AssetIdentity) =
         StorageResult<AssetQuote>(null, StorageFailure.NOT_FOUND)
     override fun close() {}

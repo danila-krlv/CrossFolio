@@ -5,6 +5,7 @@ struct TabBarScreen: View {
     private let coordinator: TabBarCoordinator
     @State private var selectedTab: AppTab
     @State private var alertMessage: String?
+    @State private var canRetryKey = false
     @State private var stopObservingTabs: (() -> Void)?
 
     init(coordinator: TabBarCoordinator) {
@@ -23,6 +24,7 @@ struct TabBarScreen: View {
             stopObservingTabs = coordinator.observeState {
                 selectedTab = $0.selectedTab
                 alertMessage = $0.alertMessage
+                canRetryKey = $0.apiKeyValidation.status == .checkFailed && !$0.apiKeyValidation.isEditing
             }
         }
         .onDisappear {
@@ -30,6 +32,9 @@ struct TabBarScreen: View {
             stopObservingTabs = nil
         }
         .alert("Ошибка", isPresented: alertPresented) {
+            if canRetryKey {
+                Button("Проверить сохранённый ключ") { coordinator.apiKeyInteractor.start() }
+            }
             Button("ОК") { coordinator.dismissAlert() }
         } message: {
             Text(alertMessage ?? "")

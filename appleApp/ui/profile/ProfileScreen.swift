@@ -7,6 +7,7 @@ struct ProfileScreen: View {
     @State private var userName: String
     @State private var theme: AppTheme
     @State private var coinMarketCapApiKey: String
+    @State private var canRetryKey = false
     @State private var stopObservingKey: (() -> Void)?
 
     init(viewModel: ProfileViewModel) {
@@ -39,6 +40,9 @@ struct ProfileScreen: View {
                     if focused { viewModel.beginApiKeyEditing(apiKey: coinMarketCapApiKey) }
                     else { viewModel.finishApiKeyEditing() }
                 }
+            if canRetryKey {
+                Button("Проверить сохранённый ключ") { viewModel.apiKeyInteractor.start() }
+            }
         }
         #if os(macOS)
         .formStyle(.grouped)
@@ -48,6 +52,7 @@ struct ProfileScreen: View {
         .onAppear {
             stopObservingKey?()
             stopObservingKey = viewModel.apiKeyInteractor.observeState { state in
+                canRetryKey = !state.isEditing && state.status == .checkFailed
                 if !state.isEditing && (state.status == .valid || state.status == .missing) {
                     coinMarketCapApiKey = viewModel.getCoinMarketCapApiKey()
                 }

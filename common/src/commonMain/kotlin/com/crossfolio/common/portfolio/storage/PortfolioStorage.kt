@@ -37,6 +37,9 @@ interface PortfolioStorage {
     /** The position must already exist. */
     suspend fun saveLastQuote(quote: AssetQuote): StorageResult<Unit>
 
+    /** Saves a refresh batch atomically and records a single portfolio snapshot. */
+    suspend fun saveLastQuotes(quotes: List<AssetQuote>): StorageResult<Unit>
+
     suspend fun loadSnapshots(): StorageResult<List<PortfolioSnapshot>>
 
     fun close()

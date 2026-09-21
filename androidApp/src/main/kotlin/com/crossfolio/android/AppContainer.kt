@@ -21,6 +21,7 @@ internal class AppContainer(context: Context) {
         val transport = NetworkManager()
         val interactor = ApiKeyInteractor(secureStorage, CoinMarketCapClient(transport) { "" })
         val client = CoinMarketCapClient(transport, interactor::getSavedKey)
+        val imageClient = CoinMarketCapClient(NetworkManager.forImages()) { "" }
         val profileViewModel = ProfileViewModel(
             AndroidProfilePreferencesStorage(applicationContext),
             interactor,
@@ -30,7 +31,7 @@ internal class AppContainer(context: Context) {
         tabBarCoordinator = TabBarCoordinator(
             portfolioCoordinator = PortfolioCoordinator(
                 assetCatalog = client,
-                imageLoader = client::fetchImg,
+                imageLoader = imageClient::fetchImg,
                 logoUrlProvider = client::logoUrl,
                 marketPriceSource = client,
                 portfolioStorage = portfolioStorage,
